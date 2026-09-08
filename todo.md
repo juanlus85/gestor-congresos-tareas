@@ -1,8 +1,9 @@
-# Publicación y despliegue v1.6
+# Controles de administración v1.7
 
 | Área | Estado | Resultado |
 |---|---|---|
-| GitHub | Completado | Repositorio privado creado y código publicado en `juanlus85/gestor-congresos-tareas`. |
-| VPS | Completado | Instalador para Ubuntu, servicio `systemd`, Nginx, MariaDB y HTTPS preparados. |
-| Secretos | Completado | Plantilla para variables del sistema y guía para clave GitHub de sólo lectura. |
-| Validación | Completado | Sintaxis del instalador, 16 pruebas, TypeScript y compilación de producción correctos. |
+| Acceso a tareas | Completado | Sólo el perfil `admin` ve todas las tareas; cualquier colaborador ve exclusivamente asignaciones directas o por grupo. |
+| Perfiles | Completado | Cargo y posición se seleccionan desde catálogos; las personas pueden eliminarse de forma segura. |
+| Limpieza | Completado | Se pueden eliminar tareas, grupos, categorías y opciones de configuración; se conservan los registros que no corresponda borrar. |
+| Protección | Completado | No puede eliminarse la cuenta de la sesión actual ni el último administrador. |
+| Validación | Completado | 17 pruebas, TypeScript, build y servidor de desarrollo correctos. |

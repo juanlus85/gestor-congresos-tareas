@@ -4,7 +4,7 @@ import { canManageWorkspace, isOrganizer, roleLabels } from "./permissions";
 describe("Permisos simplificados", () => {
   it("concede administración completa sólo a organizadores", () => {
     expect(isOrganizer("admin")).toBe(true);
-    expect(isOrganizer("direction")).toBe(true);
+    expect(isOrganizer("direction")).toBe(false);
     expect(isOrganizer("collaborator")).toBe(false);
     expect(isOrganizer("viewer")).toBe(false);
   });

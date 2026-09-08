@@ -61,7 +61,7 @@ const clean = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]
 const usableName = (value?: string | null) => Boolean(value && !value.toLowerCase().includes("pendiente"));
 
 function normalizedRole(role: string) {
-  if (role === "admin" || role === "direction") return "admin";
+  if (role === "admin") return "admin";
   if (role === "viewer") return "viewer";
   return "collaborator";
 }
@@ -183,17 +183,33 @@ export async function ensureSeedData() {
   }
 }
 
-export async function getEffectiveRole(user: { email?: string | null; role: string }) {
+function localMemberId(openId?: string | null) {
+  const match = openId?.match(/^local:(\d+)$/);
+  return match ? Number(match[1]) : undefined;
+}
+
+export async function getEffectiveRole(user: { openId?: string | null; email?: string | null; role: string }) {
   const db = await getDb();
-  if (!db || !user.email) return normalizedRole(user.role);
+  if (!db) return normalizedRole(user.role);
+  const memberId = localMemberId(user.openId);
+  if (memberId) {
+    const [profile] = await db.select().from(members).where(eq(members.id, memberId)).limit(1);
+    return profile && profile.active ? normalizedRole(profile.role) : "viewer";
+  }
+  if (!user.email) return normalizedRole(user.role);
   const [profile] = await db.select().from(members).where(eq(members.email, user.email)).limit(1);
   if (profile && !profile.active) return "viewer";
   return profile ? normalizedRole(profile.role) : normalizedRole(user.role);
 }
 
-export async function getCurrentMember(user: { email?: string | null; name?: string | null }) {
+export async function getCurrentMember(user: { openId?: string | null; email?: string | null; name?: string | null }) {
   const db = await getDb();
   if (!db) return undefined;
+  const memberId = localMemberId(user.openId);
+  if (memberId) {
+    const [byId] = await db.select().from(members).where(eq(members.id, memberId)).limit(1);
+    return byId;
+  }
   if (user.email) {
     const [byEmail] = await db.select().from(members).where(eq(members.email, user.email)).limit(1);
     if (byEmail) return byEmail;
@@ -258,6 +274,13 @@ export async function listAssignedTasks(eventId: number, memberId: number) {
 export async function getTaskById(id: number) { const db = await getDb(); if (!db) return undefined; const rows = await db.select().from(conferenceTasks).where(eq(conferenceTasks.id, id)).limit(1); return rows[0]; }
 export async function createTask(values: typeof conferenceTasks.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(conferenceTasks).values(values); }
 export async function updateTask(id: number, values: Partial<typeof conferenceTasks.$inferInsert>) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); await db.update(conferenceTasks).set(values).where(eq(conferenceTasks.id, id)); return getTaskById(id); }
+export async function deleteTaskSafely(id: number) {
+  const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible");
+  await db.delete(taskAssignments).where(eq(taskAssignments.taskId, id));
+  await db.delete(taskNotes).where(eq(taskNotes.taskId, id));
+  await db.delete(taskVerifications).where(eq(taskVerifications.taskId, id));
+  await db.delete(conferenceTasks).where(eq(conferenceTasks.id, id));
+}
 
 export async function replaceTaskAssignments(taskId: number, memberIds: number[], groupIds: number[]) {
   const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible");
@@ -276,12 +299,27 @@ export async function updateCategory(id: number, values: Partial<typeof categori
 export async function deleteCategorySafely(id: number) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); const linkedTasks = await db.select({ id: conferenceTasks.id }).from(conferenceTasks).where(eq(conferenceTasks.categoryId, id)); await db.update(conferenceTasks).set({ categoryId: null }).where(eq(conferenceTasks.categoryId, id)); await db.delete(categories).where(eq(categories.id, id)); return linkedTasks.length; }
 export async function createMember(values: typeof members.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(members).values(values); }
 export async function updateMember(id: number, values: Partial<typeof members.$inferInsert>) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); await db.update(members).set(values).where(eq(members.id, id)); if (values.email && values.role) await db.update(users).set({ role: values.role }).where(eq(users.email, values.email)); }
+export async function deleteMemberSafely(id: number) {
+  const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible");
+  const [member] = await db.select().from(members).where(eq(members.id, id)).limit(1);
+  if (!member) return false;
+  if (normalizedRole(member.role) === "admin") {
+    const allMembers = await db.select().from(members);
+    if (allMembers.filter(item => item.active && normalizedRole(item.role) === "admin").length <= 1) throw new Error("No se puede eliminar el último organizador administrador.");
+  }
+  await db.delete(groupMembers).where(eq(groupMembers.memberId, id));
+  await db.delete(taskAssignments).where(eq(taskAssignments.memberId, id));
+  await db.delete(members).where(eq(members.id, id));
+  return true;
+}
 export async function createGroup(values: typeof workGroups.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(workGroups).values(values); }
 export async function updateGroup(id: number, values: Partial<typeof workGroups.$inferInsert>) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.update(workGroups).set(values).where(eq(workGroups.id, id)); }
+export async function deleteGroupSafely(id: number) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); await db.delete(groupMembers).where(eq(groupMembers.groupId, id)); await db.delete(taskAssignments).where(eq(taskAssignments.groupId, id)); await db.delete(workGroups).where(eq(workGroups.id, id)); }
 export async function replaceGroupMembers(groupId: number, memberIds: number[]) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); await db.delete(groupMembers).where(eq(groupMembers.groupId, groupId)); if (memberIds.length) await db.insert(groupMembers).values(memberIds.map(memberId => ({ groupId, memberId }))); }
 export async function listConfigurationItems() { await ensureSeedData(); const db = await getDb(); return db ? db.select().from(configurationItems) : []; }
 export async function createConfigurationItem(values: typeof configurationItems.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(configurationItems).values(values); }
 export async function updateConfigurationItem(id: number, values: Partial<typeof configurationItems.$inferInsert>) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.update(configurationItems).set(values).where(eq(configurationItems.id, id)); }
+export async function deleteConfigurationItem(id: number) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); await db.delete(configurationItems).where(eq(configurationItems.id, id)); }
 
 export async function createTaskVerification(values: typeof taskVerifications.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(taskVerifications).values(values); }
 export async function listTaskVerifications(taskIds: number[]) { const db = await getDb(); if (!db || !taskIds.length) return []; const all = await db.select().from(taskVerifications); return all.filter(verification => taskIds.includes(verification.taskId)); }

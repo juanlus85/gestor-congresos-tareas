@@ -30,9 +30,9 @@ const taskEditFields = z.object({
 
 function forbidden() { throw new TRPCError({ code: "FORBIDDEN", message: "Esta acción requiere permisos de organizador." }); }
 function currentName(user: { name?: string | null; email?: string | null }) { return user.name || user.email || "Usuario"; }
-async function roleFor(user: { email?: string | null; role: string }) { return db.getEffectiveRole(user); }
+async function roleFor(user: { openId?: string | null; email?: string | null; role: string }) { return db.getEffectiveRole(user); }
 
-async function visibleTasks(eventId: number, user: { email?: string | null; name?: string | null; role: string }) {
+async function visibleTasks(eventId: number, user: { openId?: string | null; email?: string | null; name?: string | null; role: string }) {
   const role = await roleFor(user);
   if (isOrganizer(role)) return db.listTasks(eventId);
   const member = await db.getCurrentMember(user);
@@ -112,6 +112,10 @@ export const appRouter = router({
       const data = isOrganizer(role) ? input.data : { status: input.data.status === "Resuelta" || input.data.status === "Pendiente de verificación" ? undefined : input.data.status, progress: input.data.progress };
       await db.updateTask(input.id, Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined))); return { success: true };
     }),
+    remove: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden();
+      await db.deleteTaskSafely(input.id); return { success: true };
+    }),
     submitVerification: protectedProcedure.input(z.object({ taskId: z.number().int(), note: z.string().trim().max(5000).nullable().optional() })).mutation(async ({ ctx, input }) => {
       const task = await db.getTaskById(input.taskId); if (!task || !task.eventId) throw new TRPCError({ code: "NOT_FOUND" });
       const visible = await visibleTasks(task.eventId, ctx.user); if (!visible.some(item => item.id === task.id)) forbidden();
@@ -152,12 +156,21 @@ export const appRouter = router({
     update: protectedProcedure.input(z.object({ id: z.number().int(), name: z.string().trim().min(2).max(255).optional(), email: z.string().email().max(320).optional(), password: passwordInput.optional(), role: z.enum(["admin", "collaborator"]).optional(), active: z.boolean().optional(), jobTitle: safeText, position: safeText, organization: safeText, phone: safeText, notes: nullableText })).mutation(async ({ ctx, input }) => {
       const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const { id, password, email, ...data } = input; await db.updateMember(id, { ...data, ...(email ? { email: email.trim().toLowerCase() } : {}), ...(password ? { passwordHash: await hashPassword(password) } : {}) }); return { success: true };
     }),
+    remove: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden();
+      const member = await db.getMemberById(input.id); if (!member) throw new TRPCError({ code: "NOT_FOUND", message: "La persona ya no existe." });
+      if (ctx.user.openId === `local:${input.id}`) throw new TRPCError({ code: "BAD_REQUEST", message: "No puedes eliminar tu propia cuenta mientras tienes la sesión abierta." });
+      try { await db.deleteMemberSafely(input.id); }
+      catch (error) { throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "No se pudo eliminar la persona." }); }
+      return { success: true };
+    }),
   }),
 
   groups: router({
     create: protectedProcedure.input(z.object({ eventId: z.number().int(), name: z.string().trim().min(2).max(120), description: nullableText })).mutation(async ({ ctx, input }) => { const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); await db.createGroup(input); return { success: true }; }),
     update: protectedProcedure.input(z.object({ id: z.number().int(), name: z.string().trim().min(2).max(120).optional(), description: nullableText })).mutation(async ({ ctx, input }) => { const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const { id, ...data } = input; await db.updateGroup(id, data); return { success: true }; }),
     setMembers: protectedProcedure.input(z.object({ groupId: z.number().int(), memberIds: z.array(z.number().int()) })).mutation(async ({ ctx, input }) => { const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); await db.replaceGroupMembers(input.groupId, input.memberIds); return { success: true }; }),
+    remove: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => { const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); await db.deleteGroupSafely(input.id); return { success: true }; }),
   }),
 
   events: router({
@@ -168,6 +181,7 @@ export const appRouter = router({
   configuration: router({
     create: protectedProcedure.input(z.object({ type: z.enum(configurationTypes), name: z.string().trim().min(2).max(255), description: nullableText })).mutation(async ({ ctx, input }) => { const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); await db.createConfigurationItem(input); return { success: true }; }),
     update: protectedProcedure.input(z.object({ id: z.number().int(), type: z.enum(configurationTypes).optional(), name: z.string().trim().min(2).max(255).optional(), description: nullableText })).mutation(async ({ ctx, input }) => { const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const { id, ...data } = input; await db.updateConfigurationItem(id, data); return { success: true }; }),
+    remove: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => { const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); await db.deleteConfigurationItem(input.id); return { success: true }; }),
   }),
 
   documents: router({
