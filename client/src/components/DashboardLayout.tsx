@@ -38,15 +38,15 @@ export default function DashboardLayout({ active, onNavigate, items, role, roleL
         <section className="relative px-7 py-12 sm:px-12 lg:px-16 xl:px-24 flex items-center z-10">
           <div className="max-w-xl">
             <div className="inline-flex items-center gap-3 text-[#dcc88c] text-xs uppercase tracking-[0.24em] font-semibold mb-10">
-              <span className="w-8 h-px bg-[#c69b4a]" /> 7th World P&OM Conference
+              <span className="w-8 h-px bg-[#c69b4a]" /> Gestor de congresos
             </div>
-            <h1 className="font-serif text-4xl sm:text-5xl text-white leading-[1.06]">Un solo lugar para <em className="text-[#e5ba65]">coordinar</em> el congreso.</h1>
-            <p className="mt-7 max-w-lg text-slate-300 leading-7">Tareas, responsables, decisiones y evidencias operativas del 7WP&OMC. Acceso seguro y ajustado a cada comité.</p>
+            <h1 className="font-serif text-4xl sm:text-5xl text-white leading-[1.06]">Un solo lugar para <em className="text-[#e5ba65]">coordinar</em> cada congreso.</h1>
+            <p className="mt-7 max-w-lg text-slate-300 leading-7">Crea tareas, categorías y grupos. Asigna el trabajo a una o varias personas y deja que cada colaborador vea sólo lo que le corresponde.</p>
             <Button onClick={() => startLogin()} size="lg" className="mt-10 bg-[#c79237] hover:bg-[#af7f2f] text-[#061a2f] font-semibold px-7">
               Acceder al espacio de trabajo
             </Button>
             <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-xs text-slate-400">
-              <span>152 tareas importadas</span><span>•</span><span>1–4 septiembre 2027</span><span>•</span><span>Sevilla</span>
+              <span>Tareas compartidas</span><span>•</span><span>Grupos de trabajo</span><span>•</span><span>Acceso por persona</span>
             </div>
           </div>
         </section>
@@ -64,9 +64,9 @@ export default function DashboardLayout({ active, onNavigate, items, role, roleL
       <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#071b31] text-slate-100 transition-[width,transform] duration-200 ${compact ? "w-[76px]" : "w-[268px]"} ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
         <div className="h-[82px] border-b border-white/10 px-5 flex items-center justify-between gap-3">
           <button onClick={() => { onNavigate("overview"); setIsOpen(false); }} className="text-left min-w-0">
-            <p className={`text-[10px] font-semibold tracking-[0.2em] text-[#d8be77] uppercase ${compact ? "hidden" : ""}`}>7th World P&OM Conference</p>
-            <p className={`font-serif text-xl text-white mt-1 truncate ${compact ? "hidden" : ""}`}>Centro de coordinación</p>
-            {compact && <span className="font-serif text-lg text-[#e5ba65]">7W</span>}
+            <p className={`text-[10px] font-semibold tracking-[0.2em] text-[#d8be77] uppercase ${compact ? "hidden" : ""}`}>Gestor de congresos</p>
+            <p className={`font-serif text-xl text-white mt-1 truncate ${compact ? "hidden" : ""}`}>Tareas compartidas</p>
+            {compact && <span className="font-serif text-lg text-[#e5ba65]">GC</span>}
           </button>
           <button onClick={() => setCompact(!compact)} className="hidden lg:grid h-8 w-8 place-items-center rounded-md text-slate-400 hover:bg-white/10 hover:text-white" aria-label="Contraer menú">
             <PanelLeftClose size={17} className={compact ? "rotate-180" : ""} />

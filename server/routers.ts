@@ -5,58 +5,28 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import {
-  canCreateTask,
-  canEditDocuments,
-  canEditMeetings,
-  canEditTask,
-  canManageMembers,
-  canManageStructure,
-  canViewFinance,
-  canViewLocalBoard,
-  canViewTask,
-  roleLabels,
-} from "./permissions";
+import { canManageWorkspace, isOrganizer, roleLabels } from "./permissions";
 
 const nullableText = z.string().max(5000).nullable().optional();
-const taskFields = z.object({
-  externalId: z.string().min(1).max(32),
-  phase: z.string().min(1).max(120),
-  workBlock: z.string().min(1).max(120),
-  title: z.string().min(1).max(500),
+const taskEditFields = z.object({
+  title: z.string().trim().min(1).max(500).optional(),
   description: nullableText,
-  observations: nullableText,
-  status: z.string().max(64).optional(),
-  committee: z.string().max(255).nullable().optional(),
-  responsible: z.string().max(255).nullable().optional(),
-  coResponsible1: z.string().max(255).nullable().optional(),
-  coResponsible2: z.string().max(255).nullable().optional(),
-  support: z.string().max(255).nullable().optional(),
-  priority: z.string().max(32).optional(),
-  scope: z.string().max(255).nullable().optional(),
-  platformModule: z.string().max(80).nullable().optional(),
-  team: z.string().max(255).nullable().optional(),
-  plannedStart: z.string().max(64).nullable().optional(),
+  status: z.enum(["Pendiente", "En curso", "Resuelta", "Bloqueada"]).optional(),
+  priority: z.enum(["Alta", "Media", "Baja"]).optional(),
   dueDate: z.string().max(64).nullable().optional(),
-  actualClose: z.string().max(64).nullable().optional(),
-  deliverable: nullableText,
-  dependencies: nullableText,
-  risk: nullableText,
-  decisionRequired: nullableText,
-  assignedAtMeeting: nullableText,
-  costEstimate: z.string().max(64).nullable().optional(),
-  costActual: z.string().max(64).nullable().optional(),
   progress: z.number().int().min(0).max(100).optional(),
-  localEligible: z.boolean().optional(),
-  localWorkstream: z.string().max(120).nullable().optional(),
+  categoryId: z.number().int().nullable().optional(),
 });
 
-function forbidden() {
-  throw new TRPCError({ code: "FORBIDDEN", message: "No dispone de permiso para esta acción." });
-}
+function forbidden() { throw new TRPCError({ code: "FORBIDDEN", message: "Esta acción requiere permisos de organizador." }); }
+async function roleFor(user: { email?: string | null; role: string }) { return db.getEffectiveRole(user); }
 
-async function roleFor(user: { email?: string | null; role: string }) {
-  return db.getEffectiveRole(user);
+async function visibleTasks(eventId: number, user: { email?: string | null; name?: string | null; role: string }) {
+  const role = await roleFor(user);
+  if (isOrganizer(role)) return db.listTasks(eventId);
+  const member = await db.getCurrentMember(user);
+  if (!member || !member.active || role === "viewer") return [];
+  return db.listAssignedTasks(eventId, member.id);
 }
 
 export const appRouter = router({
@@ -64,201 +34,109 @@ export const appRouter = router({
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      ctx.res.clearCookie(COOKIE_NAME, { ...getSessionCookieOptions(ctx.req), maxAge: -1 });
       return { success: true } as const;
     }),
   }),
 
   workspace: router({
     access: protectedProcedure.query(async ({ ctx }) => {
+      await db.ensureSeedData();
       const role = await roleFor(ctx.user);
-      return { role, label: roleLabels[role] ?? roleLabels.viewer };
+      return { role, label: roleLabels[role] ?? "Colaborador/a", isOrganizer: isOrganizer(role) };
     }),
-    dashboard: protectedProcedure.query(async ({ ctx }) => {
-      const role = await roleFor(ctx.user);
-      const allTasks = await db.listTasks();
-      const visible = allTasks.filter(task => canViewTask(role, task, ctx.user.name));
-      const local = allTasks.filter(task => task.localEligible);
+    events: protectedProcedure.query(() => db.listEvents()),
+    overview: protectedProcedure.input(z.object({ eventId: z.number().int() })).query(async ({ ctx, input }) => {
+      const tasks = await visibleTasks(input.eventId, ctx.user);
       return {
-        role,
-        taskCount: visible.length,
-        pending: visible.filter(task => task.status === "Pendiente").length,
-        inProgress: visible.filter(task => task.status === "En curso").length,
-        resolved: visible.filter(task => task.status === "Resuelta").length,
-        highPriority: visible.filter(task => task.priority === "Alta" && task.status !== "Resuelta").length,
-        decisions: visible.filter(task => task.decisionRequired).length,
-        blocks: Array.from(new Set(visible.map(task => task.workBlock))).length,
-        localCount: local.length,
-        nextTasks: visible.filter(task => task.status !== "Resuelta").slice(0, 6),
+        total: tasks.length,
+        pending: tasks.filter(task => task.status === "Pendiente").length,
+        active: tasks.filter(task => task.status === "En curso").length,
+        done: tasks.filter(task => task.status === "Resuelta").length,
+        assigned: tasks.slice(0, 8),
       };
     }),
-    localSummary: protectedProcedure.query(async ({ ctx }) => {
+    adminData: protectedProcedure.input(z.object({ eventId: z.number().int() })).query(async ({ ctx, input }) => {
       const role = await roleFor(ctx.user);
-      if (!canViewLocalBoard(role)) forbidden();
-      const tasks = (await db.listTasks()).filter(task => task.localEligible);
-      const grouped = Object.entries(
-        tasks.reduce<Record<string, typeof tasks>>((acc, task) => {
-          const key = task.localWorkstream ?? "Coordinación local";
-          acc[key] = [...(acc[key] ?? []), task];
-          return acc;
-        }, {})
-      ).map(([name, entries]) => ({
-        name,
-        total: entries.length,
-        pending: entries.filter(task => task.status === "Pendiente").length,
-        active: entries.filter(task => task.status === "En curso").length,
-        done: entries.filter(task => task.status === "Resuelta").length,
-        high: entries.filter(task => task.priority === "Alta" && task.status !== "Resuelta").length,
-        tasks: entries,
-      })).sort((a, b) => b.high - a.high || b.total - a.total);
-      return { total: tasks.length, groups: grouped };
+      if (!canManageWorkspace(role)) forbidden();
+      const [categories, groups, allMembers, membershipRows, assignmentRows, tasks] = await Promise.all([
+        db.listCategories(input.eventId), db.listGroups(input.eventId), db.listMembers(), db.listGroupMembers(), db.listTaskAssignments(), db.listTasks(input.eventId),
+      ]);
+      const taskIds = tasks.map(task => task.id);
+      return {
+        categories,
+        groups,
+        members: allMembers,
+        groupMembers: membershipRows.filter(row => groups.some(group => group.id === row.groupId)),
+        taskAssignments: assignmentRows.filter(row => taskIds.includes(row.taskId)),
+      };
     }),
   }),
 
   tasks: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      const role = await roleFor(ctx.user);
-      const all = await db.listTasks();
-      return all.filter(task => canViewTask(role, task, ctx.user.name));
-    }),
-    detail: protectedProcedure.input(z.object({ id: z.number().int() })).query(async ({ ctx, input }) => {
-      const task = await db.getTaskById(input.id);
-      if (!task) throw new TRPCError({ code: "NOT_FOUND" });
-      const role = await roleFor(ctx.user);
-      if (!canViewTask(role, task, ctx.user.name)) forbidden();
-      return task;
-    }),
-    create: protectedProcedure.input(taskFields).mutation(async ({ ctx, input }) => {
-      const role = await roleFor(ctx.user);
-      if (!canCreateTask(role)) forbidden();
+    list: protectedProcedure.input(z.object({ eventId: z.number().int() })).query(async ({ ctx, input }) => visibleTasks(input.eventId, ctx.user)),
+    create: protectedProcedure.input(z.object({
+      eventId: z.number().int(), categoryId: z.number().int().nullable().optional(), title: z.string().trim().min(1).max(500),
+      description: nullableText, priority: z.enum(["Alta", "Media", "Baja"]).optional(), dueDate: z.string().max(64).nullable().optional(),
+    })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden();
+      const categories = await db.listCategories(input.eventId);
+      const category = categories.find(item => item.id === input.categoryId);
       await db.createTask({
-        ...input,
-        status: input.status ?? "Pendiente",
-        priority: input.priority ?? "Media",
-        progress: input.progress ?? 0,
-        localEligible: input.localEligible ?? false,
+        eventId: input.eventId, categoryId: input.categoryId ?? null, externalId: `T-${Date.now()}`, title: input.title,
+        description: input.description ?? null, priority: input.priority ?? "Media", dueDate: input.dueDate ?? null,
+        phase: "General", workBlock: category?.name ?? "Sin categoría", status: "Pendiente", progress: 0, localEligible: false,
       });
       return { success: true };
     }),
-    update: protectedProcedure.input(z.object({ id: z.number().int(), data: taskFields.partial() })).mutation(async ({ ctx, input }) => {
-      const task = await db.getTaskById(input.id);
-      if (!task) throw new TRPCError({ code: "NOT_FOUND" });
+    update: protectedProcedure.input(z.object({ id: z.number().int(), data: taskEditFields })).mutation(async ({ ctx, input }) => {
+      const task = await db.getTaskById(input.id); if (!task) throw new TRPCError({ code: "NOT_FOUND" });
       const role = await roleFor(ctx.user);
-      if (!canEditTask(role, task, ctx.user.name)) forbidden();
-      const updated = await db.updateTask(input.id, input.data);
-      return updated;
-    }),
-    notes: protectedProcedure.input(z.object({ taskId: z.number().int() })).query(async ({ ctx, input }) => {
-      const task = await db.getTaskById(input.taskId);
-      if (!task) throw new TRPCError({ code: "NOT_FOUND" });
-      const role = await roleFor(ctx.user);
-      if (!canViewTask(role, task, ctx.user.name)) forbidden();
-      return db.listTaskNotes(input.taskId);
-    }),
-    addNote: protectedProcedure.input(z.object({ taskId: z.number().int(), body: z.string().trim().min(1).max(5000) })).mutation(async ({ ctx, input }) => {
-      const task = await db.getTaskById(input.taskId);
-      if (!task) throw new TRPCError({ code: "NOT_FOUND" });
-      const role = await roleFor(ctx.user);
-      if (!canEditTask(role, task, ctx.user.name)) forbidden();
-      await db.addTaskNote({ taskId: input.taskId, authorName: ctx.user.name ?? "Usuario", body: input.body });
+      const visible = await visibleTasks(task.eventId ?? 0, ctx.user);
+      if (!visible.some(item => item.id === task.id)) forbidden();
+      const data = isOrganizer(role) ? input.data : { status: input.data.status, progress: input.data.progress };
+      const cleaned = Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
+      await db.updateTask(input.id, cleaned);
       return { success: true };
+    }),
+    assign: protectedProcedure.input(z.object({ taskId: z.number().int(), memberIds: z.array(z.number().int()), groupIds: z.array(z.number().int()) })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden();
+      await db.replaceTaskAssignments(input.taskId, input.memberIds, input.groupIds);
+      return { success: true };
+    }),
+  }),
+
+  events: router({
+    create: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(255), shortName: z.string().trim().min(2).max(80), location: z.string().max(255).nullable().optional(), startDate: z.string().max(32).nullable().optional(), endDate: z.string().max(32).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden();
+      await db.createEvent({ ...input, status: "Planificación" }); return { success: true };
+    }),
+  }),
+
+  categories: router({
+    create: protectedProcedure.input(z.object({ eventId: z.number().int(), name: z.string().trim().min(2).max(120), color: z.string().regex(/^#[0-9a-fA-F]{6}$/) })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden();
+      await db.createCategory(input); return { success: true };
     }),
   }),
 
   members: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      const role = await roleFor(ctx.user);
-      const records = await db.listMembers();
-      return canManageMembers(role) ? records : records.map(({ email, ...member }) => member);
+    create: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(255), email: z.string().email().max(320).nullable().optional(), role: z.enum(["admin", "collaborator"]), position: z.string().max(255).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden();
+      await db.createMember({ ...input, committee: null, active: true }); return { success: true };
     }),
-    create: protectedProcedure.input(z.object({
-      name: z.string().trim().min(2).max(255),
-      email: z.string().email().max(320).nullable().optional(),
-      role: z.enum(["admin", "direction", "local_member", "scientific", "technical", "collaborator", "viewer"]),
-      committee: z.string().max(255).nullable().optional(),
-      position: z.string().max(255).nullable().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const role = await roleFor(ctx.user);
-      if (!canManageMembers(role)) forbidden();
-      await db.createMember({ ...input, active: true });
-      return { success: true };
-    }),
-    update: protectedProcedure.input(z.object({
-      id: z.number().int(),
-      email: z.string().email().max(320).nullable().optional(),
-      role: z.enum(["admin", "direction", "local_member", "scientific", "technical", "collaborator", "viewer"]).optional(),
-      committee: z.string().max(255).nullable().optional(),
-      position: z.string().max(255).nullable().optional(),
-      active: z.boolean().optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const role = await roleFor(ctx.user);
-      if (!canManageMembers(role)) forbidden();
-      const { id, ...data } = input;
-      await db.updateMember(id, data);
-      return { success: true };
+    update: protectedProcedure.input(z.object({ id: z.number().int(), name: z.string().trim().min(2).max(255).optional(), email: z.string().email().max(320).nullable().optional(), role: z.enum(["admin", "collaborator"]).optional(), active: z.boolean().optional(), position: z.string().max(255).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const { id, ...data } = input;
+      await db.updateMember(id, data); return { success: true };
     }),
   }),
 
-  meetings: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      const role = await roleFor(ctx.user);
-      const records = await db.listMeetings();
-      if (["admin", "direction"].includes(role)) return records;
-      if (role === "local_member") return records.filter(record => record.committee.toLowerCase().includes("local"));
-      if (role === "scientific") return records.filter(record => record.committee.toLowerCase().includes("científico"));
-      if (role === "technical") return records.filter(record => record.committee.toLowerCase().includes("secretaría"));
-      forbidden();
+  groups: router({
+    create: protectedProcedure.input(z.object({ eventId: z.number().int(), name: z.string().trim().min(2).max(120), description: nullableText })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); await db.createGroup(input); return { success: true };
     }),
-    create: protectedProcedure.input(z.object({
-      title: z.string().min(2).max(255),
-      scheduledAt: z.string().min(4).max(64),
-      committee: z.string().min(2).max(255),
-      agenda: nullableText,
-      notes: nullableText,
-      status: z.string().max(32).optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const role = await roleFor(ctx.user);
-      if (!canEditMeetings(role)) forbidden();
-      await db.createMeeting({ ...input, status: input.status ?? "Planificada" });
-      return { success: true };
-    }),
-  }),
-
-  documents: router({
-    list: protectedProcedure.query(async ({ ctx }) => {
-      const role = await roleFor(ctx.user);
-      const records = await db.listDocuments();
-      if (["admin", "direction", "local_member", "scientific", "technical"].includes(role)) return records;
-      return records.filter(record => record.visibility === "Todos");
-    }),
-    create: protectedProcedure.input(z.object({
-      title: z.string().min(2).max(255),
-      category: z.string().min(2).max(120),
-      url: z.string().url().nullable().optional(),
-      owner: z.string().max(255).nullable().optional(),
-      visibility: z.string().max(32).optional(),
-    })).mutation(async ({ ctx, input }) => {
-      const role = await roleFor(ctx.user);
-      if (!canEditDocuments(role)) forbidden();
-      await db.createDocument({ ...input, visibility: input.visibility ?? "Comités" });
-      return { success: true };
-    }),
-  }),
-
-  finance: router({
-    summary: protectedProcedure.query(async ({ ctx }) => {
-      const role = await roleFor(ctx.user);
-      if (!canViewFinance(role)) forbidden();
-      const tasks = await db.listTasks();
-      return tasks.filter(task => task.workBlock === "Finanzas");
-    }),
-  }),
-
-  governance: router({
-    canManage: protectedProcedure.query(async ({ ctx }) => {
-      const role = await roleFor(ctx.user);
-      return { canManage: canManageStructure(role) };
+    setMembers: protectedProcedure.input(z.object({ groupId: z.number().int(), memberIds: z.array(z.number().int()) })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); await db.replaceGroupMembers(input.groupId, input.memberIds); return { success: true };
     }),
   }),
 });

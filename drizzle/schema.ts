@@ -31,11 +31,31 @@ export const users = mysqlTable("users", {
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
 });
 
+export const events = mysqlTable("events", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  shortName: varchar("shortName", { length: 80 }).notNull().unique(),
+  location: varchar("location", { length: 255 }),
+  startDate: varchar("startDate", { length: 32 }),
+  endDate: varchar("endDate", { length: 32 }),
+  status: varchar("status", { length: 32 }).default("Planificación").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const categories = mysqlTable("categories", {
+  id: int("id").autoincrement().primaryKey(),
+  eventId: int("eventId").notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  color: varchar("color", { length: 16 }).default("#173c59").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const members = mysqlTable("members", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 320 }),
-  role: mysqlEnum("role", userRoles).default("viewer").notNull(),
+  role: mysqlEnum("role", userRoles).default("collaborator").notNull(),
   committee: varchar("committee", { length: 255 }),
   position: varchar("position", { length: 255 }),
   active: boolean("active").default(true).notNull(),
@@ -43,8 +63,25 @@ export const members = mysqlTable("members", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const workGroups = mysqlTable("workGroups", {
+  id: int("id").autoincrement().primaryKey(),
+  eventId: int("eventId").notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  description: text("description"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export const groupMembers = mysqlTable("groupMembers", {
+  id: int("id").autoincrement().primaryKey(),
+  groupId: int("groupId").notNull(),
+  memberId: int("memberId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const conferenceTasks = mysqlTable("conferenceTasks", {
   id: int("id").autoincrement().primaryKey(),
+  eventId: int("eventId"),
+  categoryId: int("categoryId"),
   externalId: varchar("externalId", { length: 32 }).notNull().unique(),
   phase: varchar("phase", { length: 120 }).notNull(),
   workBlock: varchar("workBlock", { length: 120 }).notNull(),
@@ -76,6 +113,14 @@ export const conferenceTasks = mysqlTable("conferenceTasks", {
   localWorkstream: varchar("localWorkstream", { length: 120 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const taskAssignments = mysqlTable("taskAssignments", {
+  id: int("id").autoincrement().primaryKey(),
+  taskId: int("taskId").notNull(),
+  memberId: int("memberId"),
+  groupId: int("groupId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 export const taskNotes = mysqlTable("taskNotes", {
