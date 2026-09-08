@@ -101,14 +101,36 @@ export async function ensureSeedData() {
   }
 
   const existingGroups = await db.select().from(workGroups).where(eq(workGroups.eventId, event.id));
-  if (!existingGroups.length) {
-    await db.insert(workGroups).values([
-      { eventId: event.id, name: "Dirección", description: "Organización general y decisiones" },
-      { eventId: event.id, name: "Comité local", description: "Sede, logística y experiencia" },
-      { eventId: event.id, name: "Comité científico", description: "Programa y revisión" },
-      { eventId: event.id, name: "Secretaría técnica", description: "Inscripciones y soporte operativo" },
-    ]);
+  // Los primeros cuatro grupos se convierten en los nombres formales de la
+  // matriz sin perder sus miembros ni sus tareas ya asociadas.
+  const legacyCommitteeNames: Record<string, string> = {
+    "Dirección": "Comité Ejecutivo ACEDEDOT",
+    "Comité local": "Local Organizing Committee",
+    "Comité científico": "Comité Científico /ACEDEDOT",
+    "Secretaría técnica": "Secretaría Técnica GRX",
+  };
+  for (const group of existingGroups) {
+    const replacement = legacyCommitteeNames[group.name];
+    if (replacement) await db.update(workGroups).set({ name: replacement }).where(eq(workGroups.id, group.id));
   }
+  // Se usan todos los nombres de comité que aparecen en las tareas del Excel,
+  // para que la estructura de coordinación coincida con la matriz original.
+  const committeeNames: string[] = [
+    "Pendiente de asignar",
+    "ACEDEDOT y Local Organizing Committee",
+    "Comité comunicación local y ACEDEDOT",
+    "GRX y Comité Ejecutivo ACEDEDOT",
+  ];
+  const standardizeCommitteeName = (name: string) => name.replace(/\s+/g, " ").trim();
+  for (const task of initialTasks) if (task.committee?.trim()) committeeNames.push(standardizeCommitteeName(task.committee));
+  for (const member of initialMembers) if (member.committee?.trim()) committeeNames.push(standardizeCommitteeName(member.committee));
+  const committeeDefinitions = Array.from(new Set(committeeNames)).map(name => ({
+    name,
+    description: name.toLowerCase().includes("local") ? "Coordinación local y tareas de sede" : `Comité de trabajo: ${name}`,
+  }));
+  const updatedGroups = await db.select().from(workGroups).where(eq(workGroups.eventId, event.id));
+  const missingCommittees = committeeDefinitions.filter(({ name }) => !updatedGroups.some(group => group.name === name));
+  if (missingCommittees.length) await db.insert(workGroups).values(missingCommittees.map(({ name, description }) => ({ eventId: event.id, name, description })));
 
   const allMembers = await db.select().from(members);
   const groups = await db.select().from(workGroups).where(eq(workGroups.eventId, event.id));
@@ -118,10 +140,10 @@ export async function ensureSeedData() {
       const label = group.name.toLowerCase();
       const matching = allMembers.filter(member => {
         const committee = member.committee?.toLowerCase() ?? "";
-        return (label === "dirección" && committee.includes("dirección")) ||
-          (label === "comité local" && committee.includes("local")) ||
-          (label === "comité científico" && committee.includes("científico")) ||
-          (label === "secretaría técnica" && committee.includes("secretaría"));
+        return (label.includes("ejecutivo") && committee.includes("dirección")) ||
+          (label.includes("local organizing") && committee.includes("local")) ||
+          (label.includes("científico") && committee.includes("científico")) ||
+          (label.includes("secretaría técnica") && committee.includes("secretaría"));
       });
       if (matching.length) await db.insert(groupMembers).values(matching.map(member => ({ groupId: group.id, memberId: member.id })));
     }
@@ -138,7 +160,7 @@ export async function ensureSeedData() {
         if (assignees.some(person => clean(person).includes(clean(member.name)) || clean(member.name).includes(clean(person)))) values.push({ taskId: task.id, memberId: member.id, groupId: null });
       });
       const committee = task.committee?.toLowerCase() ?? "";
-      const group = nowGroups.find(item => (item.name === "Comité local" && committee.includes("local")) || (item.name === "Comité científico" && committee.includes("científico")) || (item.name === "Secretaría técnica" && committee.includes("secretaría")) || (item.name === "Dirección" && (committee.includes("dirección") || committee.includes("ejecutivo"))));
+      const group = nowGroups.find(item => (item.name === "Local Organizing Committee" && committee.includes("local")) || (item.name === "Comité Científico /ACEDEDOT" && committee.includes("científico")) || (item.name === "Secretaría Técnica GRX" && committee.includes("secretaría")) || (item.name === "Comité Ejecutivo ACEDEDOT" && (committee.includes("dirección") || committee.includes("ejecutivo"))));
       if (group) values.push({ taskId: task.id, memberId: null, groupId: group.id });
     }
     if (values.length) await db.insert(taskAssignments).values(values);

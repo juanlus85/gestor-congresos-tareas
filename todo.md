@@ -1,8 +1,8 @@
-# Corrección de documentos v1.8.1
+# Corrección de notas y comités v1.8.2
 
 | Área | Estado | Resultado |
 |---|---|---|
-| Escritura documental | Completado | La carga comprueba y comunica por separado errores de carpeta y de MySQL. |
-| Instalaciones previas | Completado | El arranque completa la tabla de permisos documentales si el historial de migraciones era anterior. |
-| Interfaz | Completado | La carga valida un título útil y muestra el error real de la operación. |
-| Validación | Completado | 19 pruebas superadas, incluida escritura y lectura persistente de un archivo. |
+| Notas de tarea | Completado | El procedimiento `tasks.addNote` está incluido en el servidor de producción publicado. |
+| Comités | Completado | Los grupos se muestran como Comités y se crean los nombres presentes en el Excel, sin perder asignaciones previas. |
+| Operación Plesk | Completado | La guía aclara cómo resolver la desincronización entre el navegador y el proceso Node. |
+| Validación | Completado | 20 pruebas superadas, TypeScript y compilación de producción correctos. |

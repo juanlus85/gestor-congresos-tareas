@@ -20,4 +20,19 @@ describe("Matriz 7WP&OMC importada", () => {
       "Gema Berenguer",
     ]));
   });
+
+  it("conserva los comités de trabajo de la matriz", () => {
+    const committees = new Set(initialTasks.map(task => task.committee).filter(Boolean));
+    expect([...committees]).toEqual(expect.arrayContaining([
+      "Local Organizing Committee",
+      "Comité Científico /ACEDEDOT",
+      "Comité Ejecutivo  ACEDEDOT",
+      "Comité de Comunicación Local",
+      "Steering Committee 7WP&OMC",
+      "Secretaría Técnica GRX",
+      "Tesorería / Finanzas Local",
+      "Program Committee Chairs",
+      "ACEDEDOT",
+    ]));
+  });
 });

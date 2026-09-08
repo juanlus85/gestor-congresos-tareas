@@ -50,6 +50,8 @@ Después, en Plesk, pulse **NPM Install** y después **Restart App**. La aplicac
 
 Para actualizar, ejecute el mismo `git pull`, `pnpm install --frozen-lockfile` y `pnpm build` por SSH. Después pulse **Restart App** en Plesk. El reinicio aplica automáticamente cualquier migración de base de datos pendiente.
 
+> Si aparece un mensaje como `No procedure found on path ...`, el navegador está usando el JavaScript nuevo pero Plesk conserva el proceso Node anterior. Ejecute `pnpm build`, pulse **Restart App** y recargue la página con **Ctrl+F5**.
+
 ## Diagnóstico
 
 Si Plesk muestra un error al arrancar, consulte el registro de Node.js desde Plesk. No use **Run script → migrate** en esta versión. Compruebe por SSH que el archivo de inicio y la versión actual están presentes:
