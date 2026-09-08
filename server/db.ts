@@ -169,6 +169,16 @@ export async function ensureSeedData() {
         position: "Administrador",
         active: true,
       });
+    } else if (!existingInitialAdmin.passwordHash) {
+      // An imported collaborator may already have the same email. Complete
+      // that profile only once, without overwriting an established password.
+      await db.update(members).set({
+        name: process.env.INITIAL_ADMIN_NAME?.trim() || existingInitialAdmin.name,
+        passwordHash: await hashPassword(initialAdminPassword),
+        role: "admin",
+        position: existingInitialAdmin.position || "Administrador",
+        active: true,
+      }).where(eq(members.id, existingInitialAdmin.id));
     }
   }
 }
