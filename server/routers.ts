@@ -17,7 +17,7 @@ const taskStatuses = ["Pendiente", "En curso", "Pendiente de verificación", "Re
 const configurationTypes = ["estado", "prioridad", "cargo", "posición"] as const;
 const nullableText = z.string().max(5000).nullable().optional();
 const safeText = z.string().trim().max(255).nullable().optional();
-const passwordInput = z.string().min(10).max(128).refine(isPasswordValid, "La clave debe tener al menos 10 caracteres e incluir letras y números.");
+const passwordInput = z.string().min(8).max(128).refine(isPasswordValid, "La clave debe tener al menos 8 caracteres.");
 const taskEditFields = z.object({
   title: z.string().trim().min(1).max(500).optional(),
   description: nullableText,

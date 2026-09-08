@@ -29,7 +29,7 @@ La sección **Configuración** está limitada a valores que se utilizan directam
 
 ## Acceso local
 
-Cada persona debe disponer de un correo, una clave y el estado **Activo**. La clave debe tener al menos diez caracteres e incluir letras y números. Si una persona importada ya existe sin clave, el administrador puede editarla y definir una contraseña usando el mismo correo; no se creará una cuenta duplicada.
+Cada persona debe disponer de un correo, una clave y el estado **Activo**. La clave debe tener al menos ocho caracteres; se admite cualquier combinación de letras, números y símbolos. Si una persona importada ya existe sin clave, el administrador puede editarla y definir una contraseña usando el mismo correo; no se creará una cuenta duplicada.
 
 | Comprobación si no inicia sesión | Acción administrativa |
 |---|---|

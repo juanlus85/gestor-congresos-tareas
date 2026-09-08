@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { findMemberWithPassword, hashPassword, isPasswordValid, verifyPassword } from "./localAuth";
 
 describe("Cuentas locales", () => {
-  it("exige una clave con longitud, letras y números", () => {
+  it("acepta cualquier clave de ocho o más caracteres", () => {
     expect(isPasswordValid("corta1")).toBe(false);
-    expect(isPasswordValid("sololetraslargas")).toBe(false);
-    expect(isPasswordValid("ClaveSegura2027")).toBe(true);
+    expect(isPasswordValid("sololetras")).toBe(true);
+    expect(isPasswordValid("12345678")).toBe(true);
+    expect(isPasswordValid("!#%&*?-_")).toBe(true);
   });
 
   it("almacena un hash verificable y no la clave en claro", async () => {

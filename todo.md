@@ -1,8 +1,8 @@
-# Personas y comités v1.8.3
+# Política de contraseñas v1.8.4
 
 | Área | Estado | Resultado |
 |---|---|---|
-| Ficha de persona | Completado | Permite seleccionar uno o varios comités al crear o editar una persona. |
-| Pertenencia | Completado | La selección se guarda en MySQL y reemplaza de forma segura los comités previos de esa persona. |
-| Tareas | Completado | Las tareas de los comités elegidos aparecen automáticamente en Mis tareas del colaborador. |
-| Validación | Completado | 20 pruebas superadas, TypeScript y compilación de producción correctos. |
+| Política | Completado | Las claves locales admiten letras, números o símbolos, con un mínimo de 8 caracteres. |
+| Formularios | Completado | La ayuda de creación y edición indica el nuevo mínimo. |
+| Documentación | Completado | La guía administrativa refleja la política actual. |
+| Validación | Completado | 20 pruebas superadas, incluyendo letras, números y símbolos por separado. |

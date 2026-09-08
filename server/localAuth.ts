@@ -27,5 +27,5 @@ export async function findMemberWithPassword<T extends { active: boolean; passwo
 }
 
 export function isPasswordValid(password: string) {
-  return password.length >= 10 && /[a-zA-Z]/.test(password) && /\d/.test(password);
+  return password.length >= 8;
 }
