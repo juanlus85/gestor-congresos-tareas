@@ -220,10 +220,17 @@ export async function listTasks(eventId: number) {
   return db ? db.select().from(conferenceTasks).where(eq(conferenceTasks.eventId, eventId)) : [];
 }
 
+export function assignedTaskIdsForMember(memberId: number, memberships: Array<{ memberId: number; groupId: number }>, assignments: Array<{ taskId: number; memberId: number | null; groupId: number | null }>) {
+  const groupIds = new Set(memberships.filter(item => item.memberId === memberId).map(item => item.groupId));
+  return new Set([
+    ...assignments.filter(item => item.memberId === memberId).map(item => item.taskId),
+    ...assignments.filter(item => item.groupId !== null && groupIds.has(item.groupId)).map(item => item.taskId),
+  ]);
+}
+
 export async function listAssignedTasks(eventId: number, memberId: number) {
-  const [tasks, direct, memberships, allAssignments] = await Promise.all([listTasks(eventId), listTaskAssignments(), listGroupMembers(), listTaskAssignments()]);
-  const groupIds = memberships.filter(item => item.memberId === memberId).map(item => item.groupId);
-  const taskIds = new Set([...direct.filter(item => item.memberId === memberId).map(item => item.taskId), ...allAssignments.filter(item => item.groupId !== null && groupIds.includes(item.groupId)).map(item => item.taskId)]);
+  const [tasks, memberships, assignments] = await Promise.all([listTasks(eventId), listGroupMembers(), listTaskAssignments()]);
+  const taskIds = assignedTaskIdsForMember(memberId, memberships, assignments);
   return tasks.filter(task => taskIds.has(task.id));
 }
 

@@ -14,7 +14,7 @@ import { encryptSecret } from "./secretCrypto";
 import { decodeDocument, saveDocument } from "./documentStorage";
 
 const taskStatuses = ["Pendiente", "En curso", "Pendiente de verificación", "Resuelta", "Adjudicada a otro comité", "Bloqueada", "No aplica", "Revisar"] as const;
-const configurationTypes = ["estado", "prioridad", "comité", "módulo", "fase", "cargo", "tipo_publicación", "posición", "otro"] as const;
+const configurationTypes = ["estado", "prioridad", "cargo", "posición"] as const;
 const nullableText = z.string().max(5000).nullable().optional();
 const safeText = z.string().trim().max(255).nullable().optional();
 const passwordInput = z.string().min(10).max(128).refine(isPasswordValid, "La clave debe tener al menos 10 caracteres e incluir letras y números.");
@@ -26,10 +26,6 @@ const taskEditFields = z.object({
   dueDate: z.string().max(64).nullable().optional(),
   progress: z.number().int().min(0).max(100).optional(),
   categoryId: z.number().int().nullable().optional(),
-  phase: z.string().trim().min(2).max(120).optional(),
-  committee: z.string().trim().min(2).max(255).nullable().optional(),
-  platformModule: z.string().trim().min(2).max(80).nullable().optional(),
-  publicationType: z.string().trim().min(2).max(120).nullable().optional(),
 });
 
 function forbidden() { throw new TRPCError({ code: "FORBIDDEN", message: "Esta acción requiere permisos de organizador." }); }
@@ -103,10 +99,10 @@ export const appRouter = router({
       const tasks = await db.listTasks(input.eventId); const reviews = await db.listTaskVerifications(tasks.map(task => task.id));
       return reviews.filter(review => review.status === "Pendiente").map(review => ({ ...review, task: tasks.find(task => task.id === review.taskId) }));
     }),
-    create: protectedProcedure.input(z.object({ eventId: z.number().int(), categoryId: z.number().int().nullable().optional(), title: z.string().trim().min(1).max(500), description: nullableText, priority: z.string().trim().min(2).max(32).optional(), dueDate: z.string().max(64).nullable().optional(), phase: z.string().trim().min(2).max(120).optional(), committee: z.string().trim().min(2).max(255).nullable().optional(), platformModule: z.string().trim().min(2).max(80).nullable().optional(), publicationType: z.string().trim().min(2).max(120).nullable().optional() })).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.input(z.object({ eventId: z.number().int(), categoryId: z.number().int().nullable().optional(), title: z.string().trim().min(1).max(500), description: nullableText, priority: z.string().trim().min(2).max(32).optional(), dueDate: z.string().max(64).nullable().optional() })).mutation(async ({ ctx, input }) => {
       const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden();
       const categories = await db.listCategories(input.eventId); const category = categories.find(item => item.id === input.categoryId);
-      await db.createTask({ eventId: input.eventId, categoryId: input.categoryId ?? null, externalId: `T-${Date.now()}`, title: input.title, description: input.description ?? null, priority: input.priority ?? "Media", dueDate: input.dueDate ?? null, phase: input.phase ?? "Transversal", committee: input.committee ?? null, platformModule: input.platformModule ?? null, publicationType: input.publicationType ?? null, workBlock: category?.name ?? "Sin categoría", status: "Pendiente", progress: 0, localEligible: false });
+      await db.createTask({ eventId: input.eventId, categoryId: input.categoryId ?? null, externalId: `T-${Date.now()}`, title: input.title, description: input.description ?? null, priority: input.priority ?? "Media", dueDate: input.dueDate ?? null, phase: "Transversal", workBlock: category?.name ?? "Sin categoría", status: "Pendiente", progress: 0, localEligible: false });
       return { success: true };
     }),
     update: protectedProcedure.input(z.object({ id: z.number().int(), data: taskEditFields })).mutation(async ({ ctx, input }) => {
