@@ -80,11 +80,11 @@ export const appRouter = router({
     }),
     adminData: protectedProcedure.input(z.object({ eventId: z.number().int() })).query(async ({ ctx, input }) => {
       const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden();
-      const [categories, groups, allMembers, membershipRows, assignmentRows, tasks, configuration, verifications] = await Promise.all([
-        db.listCategories(input.eventId), db.listGroups(input.eventId), db.listMembers(), db.listGroupMembers(), db.listTaskAssignments(), db.listTasks(input.eventId), db.listConfigurationItems(), db.listTaskVerifications((await db.listTasks(input.eventId)).map(task => task.id)),
+      const [categories, groups, allMembers, membershipRows, assignmentRows, tasks, configuration, verifications, documentAccess] = await Promise.all([
+        db.listCategories(input.eventId), db.listGroups(input.eventId), db.listMembers(), db.listGroupMembers(), db.listTaskAssignments(), db.listTasks(input.eventId), db.listConfigurationItems(), db.listTaskVerifications((await db.listTasks(input.eventId)).map(task => task.id)), db.listDocumentAccess(),
       ]);
       const taskIds = tasks.map(task => task.id);
-      return { categories, groups, members: allMembers.map(({ passwordHash, ...member }) => member), groupMembers: membershipRows.filter(row => groups.some(group => group.id === row.groupId)), taskAssignments: assignmentRows.filter(row => taskIds.includes(row.taskId)), configuration, verifications };
+      return { categories, groups, members: allMembers.map(({ passwordHash, ...member }) => member), groupMembers: membershipRows.filter(row => groups.some(group => group.id === row.groupId)), taskAssignments: assignmentRows.filter(row => taskIds.includes(row.taskId)), configuration, verifications, documentAccess };
     }),
   }),
 
@@ -111,6 +111,16 @@ export const appRouter = router({
       if ((input.data.status === "Resuelta" || input.data.status === "Pendiente de verificación") && input.data.status !== task.status) throw new TRPCError({ code: "BAD_REQUEST", message: "Las tareas terminadas deben enviarse y confirmarse desde el flujo de verificación." });
       const data = isOrganizer(role) ? input.data : { status: input.data.status === "Resuelta" || input.data.status === "Pendiente de verificación" ? undefined : input.data.status, progress: input.data.progress };
       await db.updateTask(input.id, Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined))); return { success: true };
+    }),
+    notes: protectedProcedure.input(z.object({ taskId: z.number().int() })).query(async ({ ctx, input }) => {
+      const task = await db.getTaskById(input.taskId); if (!task?.eventId) throw new TRPCError({ code: "NOT_FOUND" });
+      const visible = await visibleTasks(task.eventId, ctx.user); if (!visible.some(item => item.id === task.id)) forbidden();
+      return db.listTaskNotes(task.id);
+    }),
+    addNote: protectedProcedure.input(z.object({ taskId: z.number().int(), body: z.string().trim().min(1).max(5000) })).mutation(async ({ ctx, input }) => {
+      const task = await db.getTaskById(input.taskId); if (!task?.eventId) throw new TRPCError({ code: "NOT_FOUND" });
+      const visible = await visibleTasks(task.eventId, ctx.user); if (!visible.some(item => item.id === task.id)) forbidden();
+      await db.addTaskNote({ taskId: task.id, authorName: currentName(ctx.user), body: input.body }); return { success: true };
     }),
     remove: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
       const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden();
@@ -188,15 +198,28 @@ export const appRouter = router({
     list: protectedProcedure.input(z.object({ eventId: z.number().int() })).query(async ({ ctx, input }) => {
       const role = await roleFor(ctx.user);
       const all = await db.listDocuments(input.eventId);
-      return isOrganizer(role) ? all : all.filter(document => document.visibility !== "Organizadores");
+      if (isOrganizer(role)) return all;
+      const member = await db.getCurrentMember(ctx.user);
+      return (await Promise.all(all.map(async document => {
+        if (document.visibility === "Organizadores") return null;
+        if (document.visibility !== "Asignados") return document;
+        return member && await db.canMemberAccessDocument(document.id, member.id) ? document : null;
+      }))).filter(Boolean);
     }),
-    upload: protectedProcedure.input(z.object({ eventId: z.number().int(), title: z.string().trim().min(2).max(255), category: z.string().trim().min(2).max(120), visibility: z.enum(["Todos", "Comités", "Organizadores"]), fileName: z.string().trim().min(3).max(500), mimeType: z.string().trim().max(255).optional(), base64: z.string().min(4).max(14_000_000) })).mutation(async ({ ctx, input }) => {
+    upload: protectedProcedure.input(z.object({ eventId: z.number().int(), title: z.string().trim().min(2).max(255), category: z.string().trim().min(2).max(120), visibility: z.enum(["Todos", "Comités", "Organizadores", "Asignados"]), fileName: z.string().trim().min(3).max(500), mimeType: z.string().trim().max(255).optional(), base64: z.string().min(4).max(14_000_000) })).mutation(async ({ ctx, input }) => {
       const role = await roleFor(ctx.user); if (!isOrganizer(role)) forbidden();
       let decoded: ReturnType<typeof decodeDocument>;
       try { decoded = decodeDocument(input.base64, input.fileName); }
       catch (error) { throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "No se pudo procesar el documento." }); }
       const stored = await saveDocument(decoded.buffer, decoded.fileName);
       await db.createDocument({ eventId: input.eventId, title: input.title, category: input.category, visibility: input.visibility, fileName: decoded.fileName, mimeType: input.mimeType || "application/octet-stream", sizeBytes: decoded.buffer.length, storageKey: stored.key, url: stored.url, owner: currentName(ctx.user) });
+      return { success: true };
+    }),
+    setAccess: protectedProcedure.input(z.object({ id: z.number().int(), visibility: z.enum(["Todos", "Comités", "Organizadores", "Asignados"]), memberIds: z.array(z.number().int()), groupIds: z.array(z.number().int()) })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!isOrganizer(role)) forbidden();
+      if (input.visibility === "Asignados" && !input.memberIds.length && !input.groupIds.length) throw new TRPCError({ code: "BAD_REQUEST", message: "Selecciona al menos una persona o un grupo." });
+      await db.replaceDocumentAccess(input.id, input.memberIds, input.groupIds);
+      await db.updateDocument(input.id, { visibility: input.visibility });
       return { success: true };
     }),
     remove: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {

@@ -1,9 +1,8 @@
-# Controles de administración v1.7
+# Espacio colaborativo v1.8
 
 | Área | Estado | Resultado |
 |---|---|---|
-| Acceso a tareas | Completado | Sólo el perfil `admin` ve todas las tareas; cualquier colaborador ve exclusivamente asignaciones directas o por grupo. |
-| Perfiles | Completado | Cargo y posición se seleccionan desde catálogos; las personas pueden eliminarse de forma segura. |
-| Limpieza | Completado | Se pueden eliminar tareas, grupos, categorías y opciones de configuración; se conservan los registros que no corresponda borrar. |
-| Protección | Completado | No puede eliminarse la cuenta de la sesión actual ni el último administrador. |
-| Validación | Completado | 17 pruebas, TypeScript, build y servidor de desarrollo correctos. |
+| Tareas asignadas | Completado | Cada colaborador abre tareas asignadas, actualiza estado y avance, registra notas y propone el cierre. |
+| Registro de actividad | Completado | La ficha de tarea mantiene notas con autor, fecha y hora visibles para quienes participan. |
+| Documentos | Completado | Los administradores pueden dar acceso general, a colaboradores, a administradores o a personas y grupos concretos. |
+| Validación | Completado | 18 pruebas superadas, TypeScript y compilación de producción correctos. |

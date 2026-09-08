@@ -211,6 +211,15 @@ export const documents = mysqlTable("documents", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+/** Personas y grupos autorizados cuando un documento usa visibilidad Asignados. */
+export const documentAccess = mysqlTable("documentAccess", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  memberId: int("memberId"),
+  groupId: int("groupId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type ConferenceTask = typeof conferenceTasks.$inferSelect;

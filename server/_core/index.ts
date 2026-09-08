@@ -7,7 +7,7 @@ import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { getDocumentByKey, getEffectiveRole } from "../db";
+import { canMemberAccessDocument, getCurrentMember, getDocumentByKey, getEffectiveRole } from "../db";
 import { localDocumentPath } from "../documentStorage";
 import { isOrganizer } from "../permissions";
 import { migrateDatabaseOnStartup } from "../dbMigration";
@@ -51,6 +51,10 @@ async function startServer() {
       if (!document?.storageKey || !document.fileName) return res.status(404).send("Documento no encontrado.");
       const role = await getEffectiveRole(context.user);
       if (document.visibility === "Organizadores" && !isOrganizer(role)) return res.status(403).send("No tienes permiso para acceder a este documento.");
+      if (document.visibility === "Asignados" && !isOrganizer(role)) {
+        const member = await getCurrentMember(context.user);
+        if (!member || !await canMemberAccessDocument(document.id, member.id)) return res.status(403).send("No tienes permiso para acceder a este documento.");
+      }
       res.type(document.mimeType || "application/octet-stream");
       return res.download(localDocumentPath(document.storageKey), document.fileName);
     } catch {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assignedTaskIdsForMember } from "./db";
+import { assignedTaskIdsForMember, isMemberAllowedForDocument } from "./db";
 
 describe("Coordinación de tareas", () => {
   const memberships = [
@@ -18,5 +18,12 @@ describe("Coordinación de tareas", () => {
 
   it("no entrega tareas de grupos a los que la persona no pertenece", () => {
     expect([...assignedTaskIdsForMember(10, memberships, assignments)]).not.toContain(102);
+  });
+
+  it("autoriza documentos sólo por asignación directa o por grupo", () => {
+    const access = [{ memberId: 10, groupId: null }, { memberId: null, groupId: 2 }];
+    expect(isMemberAllowedForDocument(10, access, memberships)).toBe(true);
+    expect(isMemberAllowedForDocument(11, access, memberships)).toBe(true);
+    expect(isMemberAllowedForDocument(12, access, memberships)).toBe(false);
   });
 });

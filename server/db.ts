@@ -4,6 +4,7 @@ import {
   categories,
   conferenceTasks,
   configurationItems,
+  documentAccess,
   documents,
   emailMessages,
   events,
@@ -338,4 +339,20 @@ export async function createMeeting(values: typeof meetings.$inferInsert) { cons
 export async function listDocuments(eventId: number) { const db = await getDb(); if (!db) return []; const all = await db.select().from(documents); return all.filter(document => document.eventId === eventId || document.eventId === null); }
 export async function getDocumentByKey(storageKey: string) { const db = await getDb(); if (!db) return undefined; const [document] = await db.select().from(documents).where(eq(documents.storageKey, storageKey)).limit(1); return document; }
 export async function createDocument(values: typeof documents.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(documents).values(values); }
-export async function deleteDocument(id: number) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.delete(documents).where(eq(documents.id, id)); }
+export async function updateDocument(id: number, values: Partial<typeof documents.$inferInsert>) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); await db.update(documents).set(values).where(eq(documents.id, id)); }
+export async function listDocumentAccess(documentId?: number) { const db = await getDb(); if (!db) return []; const rows = await db.select().from(documentAccess); return documentId ? rows.filter(row => row.documentId === documentId) : rows; }
+export async function replaceDocumentAccess(documentId: number, memberIds: number[], groupIds: number[]) {
+  const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible");
+  await db.delete(documentAccess).where(eq(documentAccess.documentId, documentId));
+  const rows = [...memberIds.map(memberId => ({ documentId, memberId, groupId: null })), ...groupIds.map(groupId => ({ documentId, memberId: null, groupId }))];
+  if (rows.length) await db.insert(documentAccess).values(rows);
+}
+export function isMemberAllowedForDocument(memberId: number, accessRows: Array<{ memberId: number | null; groupId: number | null }>, memberships: Array<{ memberId: number; groupId: number }>) {
+  const memberGroups = new Set(memberships.filter(row => row.memberId === memberId).map(row => row.groupId));
+  return accessRows.some(row => row.memberId === memberId || (row.groupId !== null && memberGroups.has(row.groupId)));
+}
+export async function canMemberAccessDocument(documentId: number, memberId: number) {
+  const [accessRows, memberships] = await Promise.all([listDocumentAccess(documentId), listGroupMembers()]);
+  return isMemberAllowedForDocument(memberId, accessRows, memberships);
+}
+export async function deleteDocument(id: number) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); await db.delete(documentAccess).where(eq(documentAccess.documentId, id)); return db.delete(documents).where(eq(documents.id, id)); }
