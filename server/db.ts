@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   categories,
   conferenceTasks,
+  configurationItems,
   documents,
   events,
   groupMembers,
@@ -15,6 +16,7 @@ import {
   workGroups,
 } from "../drizzle/schema";
 import { initialMembers, initialTasks } from "./seed";
+import { hashPassword } from "./localAuth";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -137,6 +139,34 @@ export async function ensureSeedData() {
     }
     if (values.length) await db.insert(taskAssignments).values(values);
   }
+
+  const [existingConfiguration] = await db.select({ id: configurationItems.id }).from(configurationItems).limit(1);
+  if (!existingConfiguration) {
+    await db.insert(configurationItems).values([
+      { type: "cargo", name: "Chair", description: "Presidencia del congreso o del comité" },
+      { type: "cargo", name: "Co-Chair", description: "Copresidencia o apoyo de dirección" },
+      { type: "cargo", name: "Secretaría técnica", description: "Coordinación y soporte operativo" },
+      { type: "posición", name: "Responsable", description: "Persona responsable de un área" },
+      { type: "posición", name: "Miembro", description: "Miembro de un grupo de trabajo" },
+      { type: "posición", name: "Apoyo", description: "Apoyo a un responsable o grupo" },
+    ]);
+  }
+
+  const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase();
+  const initialAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+  if (initialAdminEmail && initialAdminPassword) {
+    const [existingInitialAdmin] = await db.select().from(members).where(eq(members.email, initialAdminEmail)).limit(1);
+    if (!existingInitialAdmin) {
+      await db.insert(members).values({
+        name: process.env.INITIAL_ADMIN_NAME?.trim() || "Administrador inicial",
+        email: initialAdminEmail,
+        passwordHash: await hashPassword(initialAdminPassword),
+        role: "admin",
+        position: "Administrador",
+        active: true,
+      });
+    }
+  }
 }
 
 export async function getEffectiveRole(user: { email?: string | null; role: string }) {
@@ -158,6 +188,20 @@ export async function getCurrentMember(user: { email?: string | null; name?: str
   if (!userName) return undefined;
   const all = await db.select().from(members);
   return all.find(member => clean(member.name) === clean(userName));
+}
+
+export async function getMemberById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [member] = await db.select().from(members).where(eq(members.id, id)).limit(1);
+  return member;
+}
+
+export async function getMemberByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [member] = await db.select().from(members).where(eq(members.email, email.trim().toLowerCase())).limit(1);
+  return member;
 }
 
 export async function listEvents() { await ensureSeedData(); const db = await getDb(); return db ? db.select().from(events) : []; }
@@ -195,10 +239,16 @@ export async function addTaskNote(values: typeof taskNotes.$inferInsert) { const
 
 export async function createEvent(values: typeof events.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(events).values(values); }
 export async function createCategory(values: typeof categories.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(categories).values(values); }
+export async function updateEvent(id: number, values: Partial<typeof events.$inferInsert>) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.update(events).set(values).where(eq(events.id, id)); }
+export async function updateCategory(id: number, values: Partial<typeof categories.$inferInsert>) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.update(categories).set(values).where(eq(categories.id, id)); }
 export async function createMember(values: typeof members.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(members).values(values); }
 export async function updateMember(id: number, values: Partial<typeof members.$inferInsert>) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); await db.update(members).set(values).where(eq(members.id, id)); if (values.email && values.role) await db.update(users).set({ role: values.role }).where(eq(users.email, values.email)); }
 export async function createGroup(values: typeof workGroups.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(workGroups).values(values); }
+export async function updateGroup(id: number, values: Partial<typeof workGroups.$inferInsert>) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.update(workGroups).set(values).where(eq(workGroups.id, id)); }
 export async function replaceGroupMembers(groupId: number, memberIds: number[]) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); await db.delete(groupMembers).where(eq(groupMembers.groupId, groupId)); if (memberIds.length) await db.insert(groupMembers).values(memberIds.map(memberId => ({ groupId, memberId }))); }
+export async function listConfigurationItems() { await ensureSeedData(); const db = await getDb(); return db ? db.select().from(configurationItems) : []; }
+export async function createConfigurationItem(values: typeof configurationItems.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(configurationItems).values(values); }
+export async function updateConfigurationItem(id: number, values: Partial<typeof configurationItems.$inferInsert>) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.update(configurationItems).set(values).where(eq(configurationItems.id, id)); }
 
 export async function listMeetings() { const db = await getDb(); return db ? db.select().from(meetings) : []; }
 export async function createMeeting(values: typeof meetings.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(meetings).values(values); }

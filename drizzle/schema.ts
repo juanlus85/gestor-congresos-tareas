@@ -55,10 +55,24 @@ export const members = mysqlTable("members", {
   id: int("id").autoincrement().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   email: varchar("email", { length: 320 }),
+  passwordHash: varchar("passwordHash", { length: 255 }),
   role: mysqlEnum("role", userRoles).default("collaborator").notNull(),
   committee: varchar("committee", { length: 255 }),
+  jobTitle: varchar("jobTitle", { length: 255 }),
   position: varchar("position", { length: 255 }),
+  organization: varchar("organization", { length: 255 }),
+  phone: varchar("phone", { length: 64 }),
+  notes: text("notes"),
   active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const configurationItems = mysqlTable("configurationItems", {
+  id: int("id").autoincrement().primaryKey(),
+  type: varchar("type", { length: 64 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

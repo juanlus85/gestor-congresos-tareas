@@ -22,6 +22,20 @@
       "when": 1788876545637,
       "tag": "0002_pretty_slipstream",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1788877429437,
+      "tag": "0003_little_thaddeus_ross",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1788877498140,
+      "tag": "0004_nasty_spectrum",
+      "breakpoints": true
     }
   ]
 }

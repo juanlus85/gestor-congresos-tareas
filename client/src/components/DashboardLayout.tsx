@@ -2,6 +2,8 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { LogOut, Menu, PanelLeftClose, type LucideIcon, X } from "lucide-react";
 import { useState } from "react";
 
@@ -21,12 +23,15 @@ type DashboardLayoutProps = {
   children: React.ReactNode;
 };
 
-const APP_VERSION = "Versión v1.1. 08/09/2026 16:16";
+const APP_VERSION = "Versión v1.2. 08/09/2026 16:34";
 
 export default function DashboardLayout({ active, onNavigate, items, role, roleLabel, children }: DashboardLayoutProps) {
-  const { loading, user, logout } = useAuth();
+  const { loading, user, logout, loginWithEmail, loginPending } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [compact, setCompact] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
 
   if (loading) {
     return <div className="min-h-screen bg-[#f6f7f4] grid place-items-center text-sm text-slate-500">Cargando espacio de coordinación…</div>;
@@ -42,10 +47,20 @@ export default function DashboardLayout({ active, onNavigate, items, role, roleL
             </div>
             <h1 className="font-serif text-4xl sm:text-5xl text-white leading-[1.06]">Un solo lugar para <em className="text-[#e5ba65]">coordinar</em> cada congreso.</h1>
             <p className="mt-7 max-w-lg text-slate-300 leading-7">Crea tareas, categorías y grupos. Asigna el trabajo a una o varias personas y deja que cada colaborador vea sólo lo que le corresponde.</p>
-            <Button onClick={() => startLogin()} size="lg" className="mt-10 bg-[#c79237] hover:bg-[#af7f2f] text-[#061a2f] font-semibold px-7">
-              Acceder al espacio de trabajo
-            </Button>
-            <div className="mt-10 flex flex-wrap gap-x-6 gap-y-3 text-xs text-slate-400">
+            <form className="mt-8 max-w-md rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm" onSubmit={async event => {
+              event.preventDefault();
+              setLoginError("");
+              try { await loginWithEmail(email, password); }
+              catch { setLoginError("El correo o la clave no son correctos."); }
+            }}>
+              <p className="text-sm font-semibold text-white">Acceso con correo</p>
+              <div className="mt-4"><Label className="text-xs text-slate-300">Correo electrónico</Label><Input required type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} className="mt-1.5 border-white/15 bg-white text-slate-900 placeholder:text-slate-400" placeholder="nombre@organizacion.es" /></div>
+              <div className="mt-3"><Label className="text-xs text-slate-300">Clave</Label><Input required type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} className="mt-1.5 border-white/15 bg-white text-slate-900" placeholder="Tu clave" /></div>
+              {loginError && <p className="mt-3 text-xs text-rose-300">{loginError}</p>}
+              <Button type="submit" disabled={loginPending} className="mt-4 w-full bg-[#c79237] hover:bg-[#af7f2f] text-[#061a2f] font-semibold">{loginPending ? "Comprobando acceso…" : "Entrar"}</Button>
+              <button type="button" onClick={() => startLogin()} className="mt-3 w-full text-xs text-slate-400 hover:text-white">Acceso alternativo con SSO</button>
+            </form>
+            <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs text-slate-400">
               <span>Tareas compartidas</span><span>•</span><span>Grupos de trabajo</span><span>•</span><span>Acceso por persona</span>
             </div>
           </div>
