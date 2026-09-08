@@ -1,85 +1,90 @@
 # Gestor de congresos y tareas compartidas
 
-**Versión v1.2 · 08/09/2026 16:34**
+**Versión v1.3 · 08/09/2026 16:47**
 
-## Finalidad
+## Alcance funcional
 
-La aplicación permite coordinar uno o varios congresos desde un único espacio. Cada congreso conserva sus propias categorías, grupos y tareas. Las personas pertenecen al directorio común. Un organizador administrador puede crear cuentas, editar perfiles y asignar una tarea a una o varias personas, a uno o varios grupos, o a una combinación de ambos.
+La aplicación es autónoma y está preparada para instalarse en un VPS externo. Todos los congresos, personas usuarias, perfiles, grupos, tareas, verificaciones e historial de correos se almacenan en una base de datos **MySQL** propia, accesible para exportación o migración mediante herramientas habituales de MySQL, CSV o Excel.
 
-El 7th World P&OM Conference continúa disponible como congreso inicial con sus 152 tareas importadas. Los siguientes congresos se crean vacíos, de forma independiente y reutilizable.
-
-| Elemento | Uso |
+| Función | Comportamiento |
 |---|---|
-| Congreso | Contenedor independiente de categorías, grupos y tareas. |
-| Categoría | Clasificación de tareas de un congreso, por ejemplo Logística, Comunicación o Programa. |
-| Persona | Perfil con nombre, correo, clave, cargo, posición, organización, teléfono y notas. |
-| Grupo | Conjunto de personas. Una tarea asignada a un grupo aparece a todos sus miembros. |
-| Tarea | Actividad con estado, prioridad, avance, fecha límite y asignaciones múltiples. |
-| Configuración | Catálogo editable de cargos, posiciones y otras opciones reutilizables. |
+| Categorías | Se pueden crear, editar y eliminar. Al eliminar una categoría, las tareas se conservan y quedan sin categoría. |
+| Tareas resueltas | No se muestran por defecto en los listados. El botón **Ver tareas resueltas** las muestra o las vuelve a ocultar. |
+| Finalización | La persona asignada envía la tarea para verificación. Un organizador administrador la confirma como resuelta o la devuelve con un comentario. |
+| Notificación de revisión | Si SMTP está configurado, el sistema avisa a los organizadores al recibir una solicitud y a la persona cuando se revisa. |
+| Mensajería | Los organizadores pueden enviar correos a una o varias personas y grupos. Los destinatarios se resuelven por personas activas con correo. |
+| Trazabilidad | Se registra el historial de correos enviados, solicitudes de verificación, persona solicitante, revisor y comentarios. |
 
-## Acceso con correo y clave
+## Flujo de verificación de tareas
 
-Cada persona usuaria accede con el correo y la clave creados por un organizador administrador. Las claves no se guardan en texto visible. La aplicación almacena una derivación criptográfica con `scrypt` y compara el resultado sin exponer la clave original.
+Las personas colaboradoras pueden avanzar una tarea y guardar su estado habitual. Cuando terminan, seleccionan **Enviar para verificación** e incluyen una nota o enlace de entrega si es necesario. La tarea pasa al estado **Pendiente de verificación** y deja de poder marcarse como resuelta directamente.
 
-| Perfil | Acceso |
-|---|---|
-| **Organizador administrador** | Puede ver y modificar todos los congresos, tareas, categorías, personas, cargos, posiciones y grupos. Puede crear cuentas, cambiar claves y suspender el acceso. |
-| **Colaborador/a** | Sólo ve las tareas asignadas directamente a su perfil o a uno de los grupos de los que forma parte. Puede actualizar el estado y el avance de sus tareas. |
+Los organizadores administradores consultan el menú **Verificaciones**. Desde allí pueden confirmar la tarea como resuelta o devolverla a la persona con instrucciones. Sólo tras esa confirmación, la tarea recibe el estado **Resuelta** y queda oculta por defecto en los listados.
 
-> **La comprobación de permisos se realiza en el servidor.** Un colaborador no puede acceder por URL o API a tareas que no se hayan asignado a su perfil o a uno de sus grupos.
+## Configuración SMTP y mensajería
 
-## Administración diaria
+En el menú **Mensajes**, un organizador debe abrir **Configurar SMTP** e introducir el servidor, puerto, usuario, contraseña, remitente y tipo de conexión. La contraseña se cifra antes de guardarse en MySQL y no vuelve a mostrarse en la interfaz. El botón **Enviar correo** realiza un envío real al proveedor SMTP configurado y deja una entrada de trazabilidad, incluyendo los errores de entrega comunicados por el servidor SMTP.
 
-El menú **Personas** permite crear una cuenta con correo y clave. También permite editar el nombre, cargo, posición, organización, teléfono, notas, perfil y estado de acceso de una persona. Al editar una cuenta, una nueva clave es opcional. Si se deja vacía, la clave existente no cambia.
+> Configure SMTP en el VPS antes del primer envío. Para Microsoft 365, Google Workspace u otro proveedor, use una cuenta de servicio, una contraseña de aplicación o el mecanismo SMTP autenticado que determine el administrador de correo.
 
-El menú **Grupos** permite crear grupos y añadir o quitar varias personas en una única operación. El menú **Categorías** permite crear y editar las categorías del congreso activo. El menú **Configuración** gestiona el catálogo de cargos y posiciones que aparece como sugerencia al editar los perfiles.
+## Crear la base de datos MySQL
 
-Para dar trabajo a una persona, abra una tarea desde **Todas las tareas**. Marque todas las personas y grupos que deban recibirla y seleccione **Aplicar asignaciones**. No es necesario duplicar la tarea para varios responsables.
+En el VPS, instale MySQL 8 o MariaDB 10.6 o superior. Ejecute el archivo `deployment/mysql-bootstrap.sql` como administrador de MySQL después de sustituir la clave de ejemplo. Crea la base `gestor_congresos`, el usuario limitado `gestor_app` y los permisos necesarios exclusivamente para esa base.
 
-## Crear un congreso futuro
+```bash
+sudo mysql < /opt/gestor-congresos/deployment/mysql-bootstrap.sql
+```
 
-Abra **Congresos** y seleccione **Nuevo congreso**. Indique el nombre, la abreviatura, la ciudad y las fechas. Después active ese congreso desde el selector superior. Cree allí sus categorías y grupos. Las tareas, las categorías y los grupos quedarán separados de los del 7WP&OMC.
+Los datos quedan en MySQL y pueden exportarse sin depender de la aplicación:
 
-## Instalación en servidor propio
+```bash
+mysqldump -u gestor_app -p gestor_congresos > gestor_congresos_$(date +%F).sql
+mysql -u gestor_app -p --batch --skip-column-names \
+  -e "SELECT id, name, email, role, jobTitle, position FROM gestor_congresos.members" \
+  > usuarios.tsv
+```
 
-La aplicación usa Node.js, React, Express, tRPC, Drizzle ORM y MySQL/TiDB. Requiere Node.js 22 o superior, `pnpm`, una base de datos MySQL compatible y HTTPS. Node.js publica las variables recibidas por el proceso mediante `process.env`. [1]
+## Instalación en VPS
+
+El VPS necesita Ubuntu 24.04 o equivalente, Node.js 22, `pnpm`, MySQL/MariaDB, Nginx y un certificado HTTPS. No use un archivo `.env`: las credenciales se definen como variables de entorno del sistema en el servicio `systemd`.
+
+```bash
+sudo useradd --system --create-home --shell /usr/sbin/nologin omc7wp
+sudo mkdir -p /opt/gestor-congresos
+sudo chown -R omc7wp:omc7wp /opt/gestor-congresos
+
+cd /opt/gestor-congresos
+sudo -u omc7wp corepack enable
+sudo -u omc7wp pnpm install --frozen-lockfile
+sudo -u omc7wp pnpm drizzle-kit migrate
+sudo -u omc7wp pnpm build
+```
+
+Copie y adapte `deployment/omc7wp.service` en `/etc/systemd/system/gestor-congresos.service`. Debe sustituir `DATABASE_URL`, `JWT_SECRET`, `INITIAL_ADMIN_EMAIL` e `INITIAL_ADMIN_PASSWORD` por valores seguros del entorno de producción. Después active el servicio:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now gestor-congresos
+sudo systemctl status gestor-congresos
+```
+
+En el primer inicio, la aplicación crea la cuenta definida por `INITIAL_ADMIN_EMAIL` si no existe. El administrador debe iniciar sesión con ese correo y clave, crear las cuentas reales y, después, retirar `INITIAL_ADMIN_PASSWORD` de la definición del servicio para evitar conservar una clave inicial.
+
+## Nginx y HTTPS
+
+Copie `deployment/nginx-omc7wp.conf` a Nginx, cambie el nombre del dominio y configure un certificado TLS válido. Nginx debe reenviar los encabezados `Host` y `X-Forwarded-Proto` para que la cookie de sesión se marque como segura. La aplicación no está diseñada para instalarse como archivos estáticos mediante FTP en `httpdocs`: requiere un proceso Node.js persistente, MySQL y un proxy HTTPS en el VPS.
+
+## Copias de seguridad y actualización
+
+Programe una copia diaria de MySQL en el VPS y conserve varias versiones fuera del servidor. Para actualizar la aplicación, copie previamente la base, despliegue el código, ejecute las migraciones de Drizzle, compile y reinicie el servicio.
 
 ```bash
 cd /opt/gestor-congresos
-corepack enable
-pnpm install --frozen-lockfile
-pnpm drizzle-kit migrate
-pnpm build
+sudo -u omc7wp pnpm drizzle-kit migrate
+sudo -u omc7wp pnpm build
+sudo systemctl restart gestor-congresos
 ```
-
-Defina las variables de entorno del servicio. Use valores reales y mantenga los secretos fuera del repositorio.
-
-```ini
-NODE_ENV=production
-PORT=3000
-DATABASE_URL=mysql://gestor_app:CONTRASENA@127.0.0.1:3306/gestor_congresos
-JWT_SECRET=SECRETO_LARGO_Y_ALEATORIO_DE_AL_MENOS_32_CARACTERES
-INITIAL_ADMIN_NAME=Nombre del administrador inicial
-INITIAL_ADMIN_EMAIL=admin@su-organizacion.es
-INITIAL_ADMIN_PASSWORD=ClaveInicialSegura2027
-```
-
-En el primer arranque, si no existe una persona con `INITIAL_ADMIN_EMAIL`, la aplicación crea esa cuenta como **organizador administrador**. Esta es la cuenta desde la que deben crearse los demás usuarios. Cambie la clave inicial en cuanto se compruebe el acceso y retire `INITIAL_ADMIN_PASSWORD` del servicio después de ese primer inicio.
-
-La aplicación mantiene un acceso alternativo con SSO para la vista previa. En un servidor propio no es necesario configurar OAuth para utilizar las cuentas locales. Si se desea habilitar además SSO institucional, configure `VITE_APP_ID`, `OAUTH_SERVER_URL` y `VITE_OAUTH_PORTAL_URL` con el proveedor correspondiente.
-
-## Proxy HTTPS
-
-Utilice Nginx o un proxy inverso equivalente para publicar el servicio Node.js mediante HTTPS. La plantilla `deployment/nginx-omc7wp.conf` debe ajustarse con el dominio y certificado reales. El proxy debe reenviar los encabezados `Host` y `X-Forwarded-Proto`, ya que permiten que la cookie de sesión use el modo seguro.
-
-## Copias y actualizaciones
-
-La información se guarda en MySQL/TiDB. Realice una copia de seguridad diaria de la base de datos. Antes de actualizar el software, haga una copia, despliegue el código nuevo, ejecute `pnpm drizzle-kit migrate`, compile con `pnpm build` y reinicie el servicio.
 
 ## Validación incluida
 
-La versión incluye pruebas de integridad de las tareas importadas, comprobación de los permisos simplificados, autenticación y cierre de sesión, así como validación de claves mediante hash. Antes de liberar la versión se ejecutaron las pruebas, la comprobación de TypeScript y la compilación de producción.
-
-## References
-
-[1]: https://nodejs.org/learn/command-line/how-to-read-environment-variables-from-nodejs "How to read environment variables from Node.js"
+La versión incluye pruebas de seguridad de claves locales, cifrado de credenciales SMTP, cierre de sesión, permisos e integridad de la matriz importada. Antes de liberar la versión se ejecutan las pruebas automatizadas, la comprobación de TypeScript y la compilación de producción.

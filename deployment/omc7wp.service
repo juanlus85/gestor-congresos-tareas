@@ -1,24 +1,26 @@
 [Unit]
-Description=7WP&OMC Centro de coordinación
+Description=Gestor de congresos y tareas compartidas
 After=network.target mysql.service
 
 [Service]
 Type=simple
 User=omc7wp
 Group=omc7wp
-WorkingDirectory=/opt/7wp-omc-control
+WorkingDirectory=/opt/gestor-congresos
 Environment=NODE_ENV=production
 Environment=PORT=3000
-Environment=DATABASE_URL=mysql://omc7wp_app:CAMBIAR_POR_CLAVE_ROBUSTA@127.0.0.1:3306/omc7wp
+Environment=DATABASE_URL=mysql://gestor_app:CAMBIAR_POR_CLAVE_MUY_ROBUSTA@127.0.0.1:3306/gestor_congresos
 Environment=JWT_SECRET=CAMBIAR_POR_SECRETO_ALEATORIO_DE_64_CARACTERES
-Environment=VITE_APP_ID=IDENTIFICADOR_DE_LA_APLICACION_OAUTH
-Environment=OAUTH_SERVER_URL=https://su-proveedor-de-identidad.example
-Environment=VITE_OAUTH_PORTAL_URL=https://su-proveedor-de-identidad.example
+Environment=INITIAL_ADMIN_NAME=Administrador inicial
+Environment=INITIAL_ADMIN_EMAIL=admin@su-dominio.es
+Environment=INITIAL_ADMIN_PASSWORD=CAMBIAR_POR_CLAVE_INICIAL_SEGURA
 ExecStart=/usr/bin/pnpm start
 Restart=always
 RestartSec=5
 NoNewPrivileges=true
 PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
 
 [Install]
 WantedBy=multi-user.target

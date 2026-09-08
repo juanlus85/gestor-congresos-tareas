@@ -77,6 +77,31 @@ export const configurationItems = mysqlTable("configurationItems", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const smtpSettings = mysqlTable("smtpSettings", {
+  id: int("id").autoincrement().primaryKey(),
+  host: varchar("host", { length: 255 }).notNull(),
+  port: int("port").notNull().default(587),
+  username: varchar("username", { length: 320 }),
+  passwordEncrypted: text("passwordEncrypted"),
+  fromName: varchar("fromName", { length: 255 }).notNull(),
+  fromEmail: varchar("fromEmail", { length: 320 }).notNull(),
+  secure: boolean("secure").default(false).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const emailMessages = mysqlTable("emailMessages", {
+  id: int("id").autoincrement().primaryKey(),
+  eventId: int("eventId"),
+  subject: varchar("subject", { length: 500 }).notNull(),
+  body: text("body").notNull(),
+  recipients: text("recipients").notNull(),
+  recipientCount: int("recipientCount").notNull(),
+  createdBy: varchar("createdBy", { length: 255 }).notNull(),
+  status: varchar("status", { length: 32 }).default("Enviado").notNull(),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 export const workGroups = mysqlTable("workGroups", {
   id: int("id").autoincrement().primaryKey(),
   eventId: int("eventId").notNull(),
@@ -127,6 +152,19 @@ export const conferenceTasks = mysqlTable("conferenceTasks", {
   localWorkstream: varchar("localWorkstream", { length: 120 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const taskVerifications = mysqlTable("taskVerifications", {
+  id: int("id").autoincrement().primaryKey(),
+  taskId: int("taskId").notNull(),
+  submittedByMemberId: int("submittedByMemberId"),
+  submittedByName: varchar("submittedByName", { length: 255 }).notNull(),
+  note: text("note"),
+  status: varchar("status", { length: 32 }).default("Pendiente").notNull(),
+  reviewedByName: varchar("reviewedByName", { length: 255 }),
+  reviewerNote: text("reviewerNote"),
+  submittedAt: timestamp("submittedAt").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewedAt"),
 });
 
 export const taskAssignments = mysqlTable("taskAssignments", {
