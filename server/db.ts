@@ -143,17 +143,18 @@ export async function ensureSeedData() {
     if (values.length) await db.insert(taskAssignments).values(values);
   }
 
-  const [existingConfiguration] = await db.select({ id: configurationItems.id }).from(configurationItems).limit(1);
-  if (!existingConfiguration) {
-    await db.insert(configurationItems).values([
-      { type: "cargo", name: "Chair", description: "Presidencia del congreso o del comité" },
-      { type: "cargo", name: "Co-Chair", description: "Copresidencia o apoyo de dirección" },
-      { type: "cargo", name: "Secretaría técnica", description: "Coordinación y soporte operativo" },
-      { type: "posición", name: "Responsable", description: "Persona responsable de un área" },
-      { type: "posición", name: "Miembro", description: "Miembro de un grupo de trabajo" },
-      { type: "posición", name: "Apoyo", description: "Apoyo a un responsable o grupo" },
-    ]);
-  }
+  const existingConfiguration = await db.select().from(configurationItems);
+  const defaultConfiguration = [
+    ["estado", "Pendiente"], ["estado", "En curso"], ["estado", "Resuelta"], ["estado", "Adjudicada a otro comité"], ["estado", "Bloqueada"], ["estado", "No aplica"], ["estado", "Revisar"],
+    ["prioridad", "Alta"], ["prioridad", "Media"], ["prioridad", "Baja"],
+    ["comité", "Local Organizing Committee"], ["comité", "Comité Científico / ACEDEDOT"], ["comité", "Comité Ejecutivo ACEDEDOT"], ["comité", "Comité de Comunicación Local"], ["comité", "Steering Committee 7WP&OMC"], ["comité", "Secretaría Técnica GRX"], ["comité", "Tesorería / Finanzas Local"], ["comité", "Pendiente de asignar"], ["comité", "Program Committee Chairs"], ["comité", "ACEDEDOT"], ["comité", "ACEDEDOT y Local Organizing Committee"], ["comité", "Comité comunicación local y ACEDEDOT"], ["comité", "GRX y Comité Ejecutivo ACEDEDOT"],
+    ["módulo", "Dashboard"], ["módulo", "Notifications"], ["módulo", "Calendar"], ["módulo", "Messages"], ["módulo", "Announcements"], ["módulo", "Meetings"], ["módulo", "Conferences"], ["módulo", "Paper Proposals"], ["módulo", "Events"], ["módulo", "Documents"], ["módulo", "Links"], ["módulo", "Tasks"], ["módulo", "Users"], ["módulo", "Settings"], ["módulo", "No aplica"],
+    ["fase", "0. Arranque"], ["fase", "1. Planificación general"], ["fase", "2. Programa científico"], ["fase", "3. Plataforma y comunicación"], ["fase", "4. Participantes"], ["fase", "5. Logística local"], ["fase", "6. Protocolo y actos"], ["fase", "7. Ejecución"], ["fase", "8. Cierre"], ["fase", "Transversal"],
+    ["cargo", "Pendiente de Asignar"], ["cargo", "Chair"], ["cargo", "Co-Chair"], ["cargo", "CO-Chair Invited sessions and Keynotes"], ["posición", "Responsable"], ["posición", "Miembro"], ["posición", "Apoyo"],
+    ["tipo_publicación", "Papers"], ["tipo_publicación", "Abstracts"], ["tipo_publicación", "Extended Abstracts"], ["tipo_publicación", "Posters"],
+  ] as const;
+  const missingConfiguration = defaultConfiguration.filter(([type, name]) => !existingConfiguration.some(item => item.type === type && item.name === name)).map(([type, name]) => ({ type, name, description: null }));
+  if (missingConfiguration.length) await db.insert(configurationItems).values(missingConfiguration);
 
   const initialAdminEmail = process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase();
   const initialAdminPassword = process.env.INITIAL_ADMIN_PASSWORD;
@@ -203,8 +204,8 @@ export async function getMemberById(id: number) {
 export async function getMemberByEmail(email: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const [member] = await db.select().from(members).where(eq(members.email, email.trim().toLowerCase())).limit(1);
-  return member;
+  const matches = await db.select().from(members).where(eq(members.email, email.trim().toLowerCase()));
+  return matches.find(member => Boolean(member.passwordHash) && member.active) ?? matches[0];
 }
 
 export async function listEvents() { await ensureSeedData(); const db = await getDb(); return db ? db.select().from(events) : []; }
@@ -268,5 +269,7 @@ export async function getOrganizerRecipients() { const db = await getDb(); if (!
 
 export async function listMeetings() { const db = await getDb(); return db ? db.select().from(meetings) : []; }
 export async function createMeeting(values: typeof meetings.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(meetings).values(values); }
-export async function listDocuments() { const db = await getDb(); return db ? db.select().from(documents) : []; }
+export async function listDocuments(eventId: number) { const db = await getDb(); if (!db) return []; const all = await db.select().from(documents); return all.filter(document => document.eventId === eventId || document.eventId === null); }
+export async function getDocumentByKey(storageKey: string) { const db = await getDb(); if (!db) return undefined; const [document] = await db.select().from(documents).where(eq(documents.storageKey, storageKey)).limit(1); return document; }
 export async function createDocument(values: typeof documents.$inferInsert) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.insert(documents).values(values); }
+export async function deleteDocument(id: number) { const db = await getDb(); if (!db) throw new Error("La base de datos no está disponible"); return db.delete(documents).where(eq(documents.id, id)); }

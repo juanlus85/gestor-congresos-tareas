@@ -1,9 +1,8 @@
-# Plan de ampliación v1.3
+# Plan de corrección y documentos v1.4
 
 | Área | Estado | Resultado |
 |---|---|---|
-| Datos y seguridad | Completado | MySQL incorpora verificaciones de tareas, SMTP cifrado e historial de mensajes. |
-| Permisos | Completado | Sólo los organizadores eliminan categorías, revisan tareas y envían correos. |
-| Interfaz | Completado | Las tareas resueltas se ocultan por defecto; se añadieron revisión y mensajería. |
-| VPS | Completado | Se incluyeron inicialización MySQL, servicio `systemd` y guía sin archivos `.env`. |
-| Validación | Completado | 10 pruebas superadas, TypeScript correcto y compilación de producción completada. |
+| Acceso local | Completado | Cookie HTTPS corregida, recarga de sesión y mensajes detallados de error. |
+| Catálogos | Completado | Incorporados los estados, prioridades, comités, módulos, fases, cargos y publicaciones previos. |
+| Biblioteca | Completado | Subida, consulta y descarga protegida de documentos por congreso. |
+| Validación | Completado | 13 pruebas superadas, TypeScript correcto y compilación de producción completada. |

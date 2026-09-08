@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogOut, Menu, PanelLeftClose, type LucideIcon, X } from "lucide-react";
 import { useState } from "react";
+import { TRPCClientError } from "@trpc/client";
 
 export type NavigationItem = {
   id: string;
@@ -23,7 +24,7 @@ type DashboardLayoutProps = {
   children: React.ReactNode;
 };
 
-const APP_VERSION = "Versión v1.3. 08/09/2026 16:47";
+const APP_VERSION = "Versión v1.4. 08/09/2026 16:58";
 
 export default function DashboardLayout({ active, onNavigate, items, role, roleLabel, children }: DashboardLayoutProps) {
   const { loading, user, logout, loginWithEmail, loginPending } = useAuth();
@@ -50,8 +51,8 @@ export default function DashboardLayout({ active, onNavigate, items, role, roleL
             <form className="mt-8 max-w-md rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm" onSubmit={async event => {
               event.preventDefault();
               setLoginError("");
-              try { await loginWithEmail(email, password); }
-              catch { setLoginError("El correo o la clave no son correctos."); }
+              try { await loginWithEmail(email.trim().toLowerCase(), password); window.location.reload(); }
+              catch (error) { setLoginError(error instanceof TRPCClientError ? error.message : "No se pudo iniciar sesión. Comprueba la conexión e inténtalo de nuevo."); }
             }}>
               <p className="text-sm font-semibold text-white">Acceso con correo</p>
               <div className="mt-4"><Label className="text-xs text-slate-300">Correo electrónico</Label><Input required type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} className="mt-1.5 border-white/15 bg-white text-slate-900 placeholder:text-slate-400" placeholder="nombre@organizacion.es" /></div>

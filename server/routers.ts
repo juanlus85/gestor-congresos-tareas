@@ -11,8 +11,10 @@ import { createLocalSession } from "./localSession";
 import { sendSmtpMessage } from "./mailer";
 import { canManageWorkspace, isOrganizer, roleLabels } from "./permissions";
 import { encryptSecret } from "./secretCrypto";
+import { decodeDocument, saveDocument } from "./documentStorage";
 
-const taskStatuses = ["Pendiente", "En curso", "Pendiente de verificación", "Resuelta", "Bloqueada"] as const;
+const taskStatuses = ["Pendiente", "En curso", "Pendiente de verificación", "Resuelta", "Adjudicada a otro comité", "Bloqueada", "No aplica", "Revisar"] as const;
+const configurationTypes = ["estado", "prioridad", "comité", "módulo", "fase", "cargo", "tipo_publicación", "posición", "otro"] as const;
 const nullableText = z.string().max(5000).nullable().optional();
 const safeText = z.string().trim().max(255).nullable().optional();
 const passwordInput = z.string().min(10).max(128).refine(isPasswordValid, "La clave debe tener al menos 10 caracteres e incluir letras y números.");
@@ -54,13 +56,13 @@ export const appRouter = router({
       const member = await db.getMemberByEmail(input.email);
       if (!member || !member.active || !(await verifyPassword(input.password, member.passwordHash))) throw new TRPCError({ code: "UNAUTHORIZED", message: "Correo o clave incorrectos." });
       const token = await createLocalSession(member.id);
-      ctx.res.cookie(LOCAL_SESSION_COOKIE, token, { ...getSessionCookieOptions(ctx.req), sameSite: "lax", maxAge: 12 * 60 * 60 * 1000 });
+      ctx.res.cookie(LOCAL_SESSION_COOKIE, token, { ...getSessionCookieOptions(ctx.req), sameSite: "none", maxAge: 12 * 60 * 60 * 1000 });
       return { success: true } as const;
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      ctx.res.clearCookie(LOCAL_SESSION_COOKIE, { ...cookieOptions, sameSite: "lax", maxAge: -1 });
+      ctx.res.clearCookie(LOCAL_SESSION_COOKIE, { ...cookieOptions, sameSite: "none", maxAge: -1 });
       return { success: true } as const;
     }),
   }),
@@ -142,8 +144,9 @@ export const appRouter = router({
 
   members: router({
     create: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(255), email: z.string().email().max(320), password: passwordInput, role: z.enum(["admin", "collaborator"]), jobTitle: safeText, position: safeText, organization: safeText, phone: safeText, notes: nullableText })).mutation(async ({ ctx, input }) => {
-      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const existing = await db.getMemberByEmail(input.email); if (existing) throw new TRPCError({ code: "CONFLICT", message: "Ya existe una persona con este correo." });
-      const { password, email, ...details } = input; await db.createMember({ ...details, email: email.trim().toLowerCase(), passwordHash: await hashPassword(password), committee: null, active: true }); return { success: true };
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const existing = await db.getMemberByEmail(input.email); if (existing?.passwordHash) throw new TRPCError({ code: "CONFLICT", message: "Ya existe una cuenta local con este correo." });
+      const { password, email, ...details } = input; const values = { ...details, email: email.trim().toLowerCase(), passwordHash: await hashPassword(password), committee: null, active: true };
+      if (existing) await db.updateMember(existing.id, values); else await db.createMember(values); return { success: true };
     }),
     update: protectedProcedure.input(z.object({ id: z.number().int(), name: z.string().trim().min(2).max(255).optional(), email: z.string().email().max(320).optional(), password: passwordInput.optional(), role: z.enum(["admin", "collaborator"]).optional(), active: z.boolean().optional(), jobTitle: safeText, position: safeText, organization: safeText, phone: safeText, notes: nullableText })).mutation(async ({ ctx, input }) => {
       const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const { id, password, email, ...data } = input; await db.updateMember(id, { ...data, ...(email ? { email: email.trim().toLowerCase() } : {}), ...(password ? { passwordHash: await hashPassword(password) } : {}) }); return { success: true };
@@ -162,8 +165,29 @@ export const appRouter = router({
   }),
 
   configuration: router({
-    create: protectedProcedure.input(z.object({ type: z.enum(["cargo", "posición", "categoría", "otro"]), name: z.string().trim().min(2).max(255), description: nullableText })).mutation(async ({ ctx, input }) => { const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); await db.createConfigurationItem(input); return { success: true }; }),
-    update: protectedProcedure.input(z.object({ id: z.number().int(), type: z.enum(["cargo", "posición", "categoría", "otro"]).optional(), name: z.string().trim().min(2).max(255).optional(), description: nullableText })).mutation(async ({ ctx, input }) => { const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const { id, ...data } = input; await db.updateConfigurationItem(id, data); return { success: true }; }),
+    create: protectedProcedure.input(z.object({ type: z.enum(configurationTypes), name: z.string().trim().min(2).max(255), description: nullableText })).mutation(async ({ ctx, input }) => { const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); await db.createConfigurationItem(input); return { success: true }; }),
+    update: protectedProcedure.input(z.object({ id: z.number().int(), type: z.enum(configurationTypes).optional(), name: z.string().trim().min(2).max(255).optional(), description: nullableText })).mutation(async ({ ctx, input }) => { const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const { id, ...data } = input; await db.updateConfigurationItem(id, data); return { success: true }; }),
+  }),
+
+  documents: router({
+    list: protectedProcedure.input(z.object({ eventId: z.number().int() })).query(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user);
+      const all = await db.listDocuments(input.eventId);
+      return isOrganizer(role) ? all : all.filter(document => document.visibility !== "Organizadores");
+    }),
+    upload: protectedProcedure.input(z.object({ eventId: z.number().int(), title: z.string().trim().min(2).max(255), category: z.string().trim().min(2).max(120), visibility: z.enum(["Todos", "Comités", "Organizadores"]), fileName: z.string().trim().min(3).max(500), mimeType: z.string().trim().max(255).optional(), base64: z.string().min(4).max(14_000_000) })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!isOrganizer(role)) forbidden();
+      let decoded: ReturnType<typeof decodeDocument>;
+      try { decoded = decodeDocument(input.base64, input.fileName); }
+      catch (error) { throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "No se pudo procesar el documento." }); }
+      const stored = await saveDocument(decoded.buffer, decoded.fileName);
+      await db.createDocument({ eventId: input.eventId, title: input.title, category: input.category, visibility: input.visibility, fileName: decoded.fileName, mimeType: input.mimeType || "application/octet-stream", sizeBytes: decoded.buffer.length, storageKey: stored.key, url: stored.url, owner: currentName(ctx.user) });
+      return { success: true };
+    }),
+    remove: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!isOrganizer(role)) forbidden();
+      await db.deleteDocument(input.id); return { success: true };
+    }),
   }),
 
   messaging: router({

@@ -197,9 +197,14 @@ export const meetings = mysqlTable("meetings", {
 
 export const documents = mysqlTable("documents", {
   id: int("id").autoincrement().primaryKey(),
+  eventId: int("eventId"),
   title: varchar("title", { length: 255 }).notNull(),
   category: varchar("category", { length: 120 }).notNull(),
   url: text("url"),
+  storageKey: varchar("storageKey", { length: 500 }),
+  fileName: varchar("fileName", { length: 500 }),
+  mimeType: varchar("mimeType", { length: 255 }),
+  sizeBytes: int("sizeBytes"),
   owner: varchar("owner", { length: 255 }),
   visibility: varchar("visibility", { length: 32 }).default("Comités").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

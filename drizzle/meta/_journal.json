@@ -43,6 +43,13 @@
       "when": 1788878299395,
       "tag": "0005_windy_morlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1788879401140,
+      "tag": "0006_empty_maverick",
+      "breakpoints": true
     }
   ]
 }

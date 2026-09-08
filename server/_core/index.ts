@@ -7,6 +7,9 @@ import { registerOAuthRoutes } from "./oauth";
 import { registerStorageProxy } from "./storageProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { getDocumentByKey, getEffectiveRole } from "../db";
+import { localDocumentPath } from "../documentStorage";
+import { isOrganizer } from "../permissions";
 import { serveStatic, setupVite } from "./vite";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -36,6 +39,20 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
   registerOAuthRoutes(app);
+  app.get("/documentos/:key", async (req, res) => {
+    try {
+      const context = await createContext({ req, res });
+      if (!context.user) return res.status(401).send("Inicia sesión para acceder al documento.");
+      const document = await getDocumentByKey(req.params.key);
+      if (!document?.storageKey || !document.fileName) return res.status(404).send("Documento no encontrado.");
+      const role = await getEffectiveRole(context.user);
+      if (document.visibility === "Organizadores" && !isOrganizer(role)) return res.status(403).send("No tienes permiso para acceder a este documento.");
+      res.type(document.mimeType || "application/octet-stream");
+      return res.download(localDocumentPath(document.storageKey), document.fileName);
+    } catch {
+      return res.status(404).send("Documento no disponible.");
+    }
+  });
   // tRPC API
   app.use(
     "/api/trpc",
