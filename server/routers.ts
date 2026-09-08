@@ -158,13 +158,14 @@ export const appRouter = router({
   }),
 
   members: router({
-    create: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(255), email: z.string().email().max(320), password: passwordInput, role: z.enum(["admin", "collaborator"]), jobTitle: safeText, position: safeText, organization: safeText, phone: safeText, notes: nullableText })).mutation(async ({ ctx, input }) => {
+    create: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(255), email: z.string().email().max(320), password: passwordInput, role: z.enum(["admin", "collaborator"]), jobTitle: safeText, position: safeText, organization: safeText, phone: safeText, notes: nullableText, committeeIds: z.array(z.number().int()).default([]) })).mutation(async ({ ctx, input }) => {
       const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const existing = await db.getMemberByEmail(input.email); if (existing?.passwordHash) throw new TRPCError({ code: "CONFLICT", message: "Ya existe una cuenta local con este correo." });
-      const { password, email, ...details } = input; const values = { ...details, email: email.trim().toLowerCase(), passwordHash: await hashPassword(password), committee: null, active: true };
-      if (existing) await db.updateMember(existing.id, values); else await db.createMember(values); return { success: true };
+      const { password, email, committeeIds, ...details } = input; const values = { ...details, email: email.trim().toLowerCase(), passwordHash: await hashPassword(password), committee: null, active: true };
+      const memberId = existing ? existing.id : await db.createMember(values); if (existing) await db.updateMember(memberId, values);
+      await db.replaceMemberCommittees(memberId, committeeIds); return { success: true };
     }),
-    update: protectedProcedure.input(z.object({ id: z.number().int(), name: z.string().trim().min(2).max(255).optional(), email: z.string().email().max(320).optional(), password: passwordInput.optional(), role: z.enum(["admin", "collaborator"]).optional(), active: z.boolean().optional(), jobTitle: safeText, position: safeText, organization: safeText, phone: safeText, notes: nullableText })).mutation(async ({ ctx, input }) => {
-      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const { id, password, email, ...data } = input; await db.updateMember(id, { ...data, ...(email ? { email: email.trim().toLowerCase() } : {}), ...(password ? { passwordHash: await hashPassword(password) } : {}) }); return { success: true };
+    update: protectedProcedure.input(z.object({ id: z.number().int(), name: z.string().trim().min(2).max(255).optional(), email: z.string().email().max(320).optional(), password: passwordInput.optional(), role: z.enum(["admin", "collaborator"]).optional(), active: z.boolean().optional(), jobTitle: safeText, position: safeText, organization: safeText, phone: safeText, notes: nullableText, committeeIds: z.array(z.number().int()).optional() })).mutation(async ({ ctx, input }) => {
+      const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden(); const { id, password, email, committeeIds, ...data } = input; await db.updateMember(id, { ...data, ...(email ? { email: email.trim().toLowerCase() } : {}), ...(password ? { passwordHash: await hashPassword(password) } : {}) }); if (committeeIds) await db.replaceMemberCommittees(id, committeeIds); return { success: true };
     }),
     remove: protectedProcedure.input(z.object({ id: z.number().int() })).mutation(async ({ ctx, input }) => {
       const role = await roleFor(ctx.user); if (!canManageWorkspace(role)) forbidden();

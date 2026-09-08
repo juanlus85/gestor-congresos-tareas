@@ -1,8 +1,8 @@
-# Corrección de notas y comités v1.8.2
+# Personas y comités v1.8.3
 
 | Área | Estado | Resultado |
 |---|---|---|
-| Notas de tarea | Completado | El procedimiento `tasks.addNote` está incluido en el servidor de producción publicado. |
-| Comités | Completado | Los grupos se muestran como Comités y se crean los nombres presentes en el Excel, sin perder asignaciones previas. |
-| Operación Plesk | Completado | La guía aclara cómo resolver la desincronización entre el navegador y el proceso Node. |
+| Ficha de persona | Completado | Permite seleccionar uno o varios comités al crear o editar una persona. |
+| Pertenencia | Completado | La selección se guarda en MySQL y reemplaza de forma segura los comités previos de esa persona. |
+| Tareas | Completado | Las tareas de los comités elegidos aparecen automáticamente en Mis tareas del colaborador. |
 | Validación | Completado | 20 pruebas superadas, TypeScript y compilación de producción correctos. |

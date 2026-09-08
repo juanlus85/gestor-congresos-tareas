@@ -24,7 +24,7 @@ type DashboardLayoutProps = {
   children: React.ReactNode;
 };
 
-const APP_VERSION = "Versión v1.8.2. 08/09/2026 19:29";
+const APP_VERSION = "Versión v1.8.3. 08/09/2026 19:35";
 
 export default function DashboardLayout({ active, onNavigate, items, role, roleLabel, children }: DashboardLayoutProps) {
   const { loading, user, logout, loginWithEmail, loginPending } = useAuth();
