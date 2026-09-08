@@ -1,0 +1,24 @@
+[Unit]
+Description=7WP&OMC Centro de coordinación
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=omc7wp
+Group=omc7wp
+WorkingDirectory=/opt/7wp-omc-control
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=DATABASE_URL=mysql://omc7wp_app:CAMBIAR_POR_CLAVE_ROBUSTA@127.0.0.1:3306/omc7wp
+Environment=JWT_SECRET=CAMBIAR_POR_SECRETO_ALEATORIO_DE_64_CARACTERES
+Environment=VITE_APP_ID=IDENTIFICADOR_DE_LA_APLICACION_OAUTH
+Environment=OAUTH_SERVER_URL=https://su-proveedor-de-identidad.example
+Environment=VITE_OAUTH_PORTAL_URL=https://su-proveedor-de-identidad.example
+ExecStart=/usr/bin/pnpm start
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

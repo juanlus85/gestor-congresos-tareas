@@ -1,0 +1,50 @@
+[
+  {
+    "Id_Colab": 0,
+    "Nombre": "Pendiente de Asignar",
+    "Comité": "Pendiente de Asignar",
+    "Cargo": "Pendiente de Asignar"
+  },
+  {
+    "Id_Colab": 1,
+    "Nombre": "José Antonio Domínguez Machuca",
+    "Comité": "Comité Ejecutivo / Dirección",
+    "Cargo": "Pendiente de Asignar"
+  },
+  {
+    "Id_Colab": 2,
+    "Nombre": "Juan Manuel Maqueira /ACEDEDOT",
+    "Comité": "Comité Ejecutivo / Dirección",
+    "Cargo": null
+  },
+  {
+    "Id_Colab": 3,
+    "Nombre": "Ana Irimia (Universidad Sevilla)",
+    "Comité": "Local Organizing Committee",
+    "Cargo": null
+  },
+  {
+    "Id_Colab": 4,
+    "Nombre": "Juan Luis Blanco",
+    "Comité": "Local Organizing Committee",
+    "Cargo": null
+  },
+  {
+    "Id_Colab": 5,
+    "Nombre": "Gema Berenguer",
+    "Comité": "Local Organizing Committee",
+    "Cargo": null
+  },
+  {
+    "Id_Colab": 6,
+    "Nombre": "Patricia-GRX Workshop",
+    "Comité": "Secretaría Técnica GRX",
+    "Cargo": "Chair"
+  },
+  {
+    "Id_Colab": 7,
+    "Nombre": "Pedro Garrido Vega",
+    "Comité": "Comité Científico /ACEDEDOT ",
+    "Cargo": null
+  }
+]

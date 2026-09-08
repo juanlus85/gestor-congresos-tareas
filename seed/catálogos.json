@@ -1,0 +1,137 @@
+[
+  {
+    "Estados": "Pendiente",
+    "Prioridades": "Alta",
+    "Comités": "Local Organizing Committee",
+    "Módulos plataforma": "Dashboard",
+    "Fases sugeridas": "0. Arranque",
+    "Cargo": "Pendiente de Asignar",
+    "Tipos Publiaciones": "Papers"
+  },
+  {
+    "Estados": "En curso",
+    "Prioridades": "Media",
+    "Comités": "Comité Científico /ACEDEDOT ",
+    "Módulos plataforma": "Notifications",
+    "Fases sugeridas": "1. Planificación general",
+    "Cargo": "Chair",
+    "Tipos Publiaciones": "Abstracts"
+  },
+  {
+    "Estados": "Resuelta",
+    "Prioridades": "Baja",
+    "Comités": "Comité Ejecutivo  ACEDEDOT",
+    "Módulos plataforma": "Calendar",
+    "Fases sugeridas": "2. Programa científico",
+    "Cargo": "Co-Chair",
+    "Tipos Publiaciones": "Extended Abstracts"
+  },
+  {
+    "Estados": "Adjudicada a otro comité",
+    "Prioridades": null,
+    "Comités": "Comité de Comunicación Local",
+    "Módulos plataforma": "Messages",
+    "Fases sugeridas": "3. Plataforma y comunicación",
+    "Cargo": "CO-Chair Invited sessions and Keynotes",
+    "Tipos Publiaciones": "Posters"
+  },
+  {
+    "Estados": "Bloqueada",
+    "Prioridades": null,
+    "Comités": "Steering Committee 7WP&OMC",
+    "Módulos plataforma": "Announcements",
+    "Fases sugeridas": "4. Participantes",
+    "Cargo": null,
+    "Tipos Publiaciones": null
+  },
+  {
+    "Estados": "No aplica",
+    "Prioridades": null,
+    "Comités": "Secretaría Técnica GRX",
+    "Módulos plataforma": "Meetings",
+    "Fases sugeridas": "5. Logística local",
+    "Cargo": null,
+    "Tipos Publiaciones": null
+  },
+  {
+    "Estados": "Revisar",
+    "Prioridades": null,
+    "Comités": "Tesorería / Finanzas Local",
+    "Módulos plataforma": "Conferences",
+    "Fases sugeridas": "6. Protocolo y actos",
+    "Cargo": null,
+    "Tipos Publiaciones": null
+  },
+  {
+    "Estados": null,
+    "Prioridades": null,
+    "Comités": "Pendiente de asignar",
+    "Módulos plataforma": "Paper Proposals",
+    "Fases sugeridas": "7. Ejecución",
+    "Cargo": null,
+    "Tipos Publiaciones": null
+  },
+  {
+    "Estados": null,
+    "Prioridades": null,
+    "Comités": "Program Committee Chairs",
+    "Módulos plataforma": "Events",
+    "Fases sugeridas": "8. Cierre",
+    "Cargo": null,
+    "Tipos Publiaciones": null
+  },
+  {
+    "Estados": null,
+    "Prioridades": null,
+    "Comités": "ACEDEDOT",
+    "Módulos plataforma": "Documents",
+    "Fases sugeridas": "Transversal",
+    "Cargo": null,
+    "Tipos Publiaciones": null
+  },
+  {
+    "Estados": null,
+    "Prioridades": null,
+    "Comités": "ACEDEDOT Y LOCAL ORGANIZING COMMITTEE",
+    "Módulos plataforma": "Links",
+    "Fases sugeridas": null,
+    "Cargo": null,
+    "Tipos Publiaciones": null
+  },
+  {
+    "Estados": null,
+    "Prioridades": null,
+    "Comités": "comité comunicación local y acededot",
+    "Módulos plataforma": "Tasks",
+    "Fases sugeridas": null,
+    "Cargo": null,
+    "Tipos Publiaciones": null
+  },
+  {
+    "Estados": null,
+    "Prioridades": null,
+    "Comités": "GRX -LOcal Organizing Committee",
+    "Módulos plataforma": "Users",
+    "Fases sugeridas": null,
+    "Cargo": null,
+    "Tipos Publiaciones": null
+  },
+  {
+    "Estados": null,
+    "Prioridades": null,
+    "Comités": "GRX y Comité Ejecutivo ACEDEDOT",
+    "Módulos plataforma": "Settings",
+    "Fases sugeridas": null,
+    "Cargo": null,
+    "Tipos Publiaciones": null
+  },
+  {
+    "Estados": null,
+    "Prioridades": null,
+    "Comités": null,
+    "Módulos plataforma": "No aplica",
+    "Fases sugeridas": null,
+    "Cargo": null,
+    "Tipos Publiaciones": null
+  }
+]
