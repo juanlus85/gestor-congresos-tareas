@@ -2,10 +2,13 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import { ENV } from "./_core/env";
 
 function encryptionKey() {
-  if (!ENV.cookieSecret || ENV.cookieSecret.length < 32) {
+  const configuredSecret = ENV.cookieSecret.length >= 32 ? ENV.cookieSecret : "";
+  const developmentSecret = process.env.NODE_ENV !== "production" ? `gestor-congresos-development-${ENV.appId || "local"}` : "";
+  const material = configuredSecret || developmentSecret;
+  if (!material) {
     throw new Error("JWT_SECRET debe tener al menos 32 caracteres para cifrar la configuración SMTP.");
   }
-  return createHash("sha256").update(ENV.cookieSecret).digest();
+  return createHash("sha256").update(material).digest();
 }
 
 export function encryptSecret(value: string) {

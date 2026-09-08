@@ -1,15 +1,18 @@
 import { SignJWT, jwtVerify } from "jose";
+import { randomBytes } from "node:crypto";
 import { ENV } from "./_core/env";
 
 const encoder = new TextEncoder();
 const ISSUER = "gestor-congresos-local";
 const AUDIENCE = "gestor-congresos";
+const developmentSecret = randomBytes(48).toString("base64url");
 
 function secret() {
-  if (!ENV.cookieSecret || ENV.cookieSecret.length < 32) {
+  const configuredSecret = ENV.cookieSecret.length >= 32 ? ENV.cookieSecret : (process.env.NODE_ENV !== "production" ? developmentSecret : ENV.cookieSecret);
+  if (!configuredSecret || configuredSecret.length < 32) {
     throw new Error("JWT_SECRET debe tener al menos 32 caracteres para las cuentas locales.");
   }
-  return encoder.encode(ENV.cookieSecret);
+  return encoder.encode(configuredSecret);
 }
 
 export async function createLocalSession(memberId: number) {

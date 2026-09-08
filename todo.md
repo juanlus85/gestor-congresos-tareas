@@ -1,8 +1,8 @@
-# Plan de corrección y documentos v1.4
+# Plan de sincronización v1.5
 
 | Área | Estado | Resultado |
 |---|---|---|
-| Acceso local | Completado | Cookie HTTPS corregida, recarga de sesión y mensajes detallados de error. |
-| Catálogos | Completado | Incorporados los estados, prioridades, comités, módulos, fases, cargos y publicaciones previos. |
-| Biblioteca | Completado | Subida, consulta y descarga protegida de documentos por congreso. |
-| Validación | Completado | 13 pruebas superadas, TypeScript correcto y compilación de producción completada. |
+| SMTP | Completado | La configuración se cifra, persiste tras recargar y muestra confirmaciones o errores concretos. |
+| Matriz | Completado | Las tareas conservan fase, comité y módulo; los catálogos alimentan los formularios de tareas. |
+| Biblioteca | Completado | Cargadas la matriz Excel, plantilla bilingüe de acta y presupuesto preliminar editable. |
+| Validación | Completado | Persistencia comprobada sin enviar correos; 14 pruebas, TypeScript y compilación superados. |

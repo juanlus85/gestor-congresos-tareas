@@ -136,6 +136,7 @@ export const conferenceTasks = mysqlTable("conferenceTasks", {
   priority: varchar("priority", { length: 32 }).default("Media").notNull(),
   scope: varchar("scope", { length: 255 }),
   platformModule: varchar("platformModule", { length: 80 }),
+  publicationType: varchar("publicationType", { length: 120 }),
   team: varchar("team", { length: 255 }),
   plannedStart: varchar("plannedStart", { length: 64 }),
   dueDate: varchar("dueDate", { length: 64 }),

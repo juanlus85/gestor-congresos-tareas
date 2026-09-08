@@ -1,0 +1,1 @@
+ALTER TABLE `conferenceTasks` ADD `publicationType` varchar(120);

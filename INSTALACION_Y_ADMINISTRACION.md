@@ -1,6 +1,6 @@
 # Gestor de congresos y tareas compartidas
 
-**Versión v1.4 · 08/09/2026 16:58**
+**Versión v1.5 · 08/09/2026 17:18**
 
 ## Resumen operativo
 
@@ -30,9 +30,9 @@ Cuando la persona ya existe por importación con el mismo correo pero sin clave,
 
 > En un VPS, el sitio debe estar detrás de HTTPS. La cookie local se emite con `Secure` y `SameSite=None`, por lo que el navegador sólo la aceptará desde una dirección HTTPS válida.
 
-## Catálogos reutilizables
+## Matriz operativa y catálogos reutilizables
 
-El menú **Configuración** incorpora los valores heredados y permite crear, editar y reutilizar los siguientes catálogos en congresos posteriores. Las categorías de tareas permanecen específicas de cada congreso y se administran desde el menú **Categorías**.
+La matriz original ya relacionaba cada actividad con una **fase**, un **comité responsable**, un **módulo de plataforma**, una **prioridad** y, cuando procede, un **tipo de publicación**. La aplicación conserva los valores importados en las 152 tareas. Al crear o editar una tarea, esos mismos campos aparecen como valores sugeridos y se guardan dentro de la tarea. Por tanto, Configuración no es un conjunto de listas independientes: define los valores reutilizables de los campos operativos que se ven y se editan en las tareas. Las categorías de tareas permanecen específicas de cada congreso y se administran desde el menú **Categorías**.
 
 | Catálogo | Valores iniciales incluidos |
 |---|---|
@@ -46,13 +46,15 @@ El menú **Configuración** incorpora los valores heredados y permite crear, edi
 
 ## Biblioteca de documentos
 
-La sección **Documentos** permite a los organizadores subir materiales comunes para cada congreso. Se aceptan PDF, Word, Excel, PowerPoint, CSV, texto e imágenes de hasta 10 MB. Cada documento tiene título, categoría documental y visibilidad. Los documentos marcados **Todos** o **Comités** están disponibles para los usuarios conectados; los marcados **Organizadores** se restringen al perfil administrador.
+La sección **Documentos** permite a los organizadores subir materiales comunes para cada congreso. Se aceptan PDF, Word, Excel, PowerPoint, CSV, texto e imágenes de hasta 10 MB. Cada documento tiene título, categoría documental y visibilidad. Los documentos marcados **Todos** o **Comités** están disponibles para los usuarios conectados; los marcados **Organizadores** se restringen al perfil administrador. La primera biblioteca contiene la matriz Excel original, una plantilla bilingüe de acta de reunión y un presupuesto preliminar editable construido a partir de las partidas de la matriz.
 
 La descarga se realiza desde una ruta protegida que verifica la sesión y la visibilidad antes de entregar el archivo. Retirar un documento elimina su ficha de la aplicación y corta el acceso, sin ejecutar un borrado irreversible del archivo de respaldo en disco.
 
 ## Configuración SMTP y mensajería
 
-En el menú **Mensajes**, un organizador puede configurar servidor, puerto, usuario, contraseña, remitente y tipo de conexión. La contraseña se cifra antes de almacenarse y no se muestra después. El envío a personas o grupos se realiza sólo cuando el organizador pulsa **Enviar correo**; cada resultado queda registrado en el historial.
+En el menú **Mensajes**, un organizador puede configurar servidor, puerto, usuario, contraseña, remitente y tipo de conexión. La contraseña se cifra antes de almacenarse y no se muestra después. El resto de valores se muestran al volver a abrir la configuración; la interfaz indica que ya existe una contraseña guardada sin revelarla. El envío a personas o grupos se realiza sólo cuando el organizador pulsa **Enviar correo**; cada resultado queda registrado en el historial.
+
+En producción, `JWT_SECRET` debe tener 32 caracteres o más y debe permanecer estable en las variables de entorno del servicio `systemd`. Esa clave también protege la contraseña SMTP cifrada. Si se cambia, las contraseñas SMTP almacenadas previamente no se podrán descifrar y se deberán guardar de nuevo. La vista previa de desarrollo emplea una clave estable derivada del identificador de proyecto si el secreto de desarrollo no cumple el mínimo; esta excepción nunca se aplica en producción.
 
 ## Crear la base de datos MySQL
 

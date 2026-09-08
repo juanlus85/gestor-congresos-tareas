@@ -50,6 +50,13 @@
       "when": 1788879401140,
       "tag": "0006_empty_maverick",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1788880227193,
+      "tag": "0007_amusing_black_tarantula",
+      "breakpoints": true
     }
   ]
 }

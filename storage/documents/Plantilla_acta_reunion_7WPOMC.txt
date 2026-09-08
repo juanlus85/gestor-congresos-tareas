@@ -1,0 +1,29 @@
+7th World P&OM Conference · Plantilla de acta / Meeting minutes template
+
+REUNIÓN / MEETING
+Fecha y hora / Date and time:
+Comité o grupo / Committee or group:
+Asistentes / Attendees:
+Ausencias justificadas / Apologies:
+Persona que redacta / Minutes prepared by:
+
+ORDEN DEL DÍA / AGENDA
+1.
+2.
+3.
+
+ACUERDOS Y DECISIONES / AGREEMENTS AND DECISIONS
+| Nº | Acuerdo o decisión | Responsable | Fecha objetivo | Evidencia o enlace |
+|----|--------------------|-------------|----------------|--------------------|
+| 1  |                    |             |                |                    |
+
+TAREAS GENERADAS / ACTIONS
+| Nº | Tarea | Persona o grupo asignado | Fecha límite | Prioridad | Estado |
+|----|-------|---------------------------|--------------|-----------|--------|
+| 1  |       |                           |              |           |        |
+
+RIESGOS, BLOQUEOS Y NECESIDADES DE APOYO / RISKS, BLOCKERS AND SUPPORT
+
+PRÓXIMA REUNIÓN / NEXT MEETING
+Fecha propuesta / Proposed date:
+Observaciones / Notes:
