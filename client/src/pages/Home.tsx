@@ -132,7 +132,7 @@ function PeopleView({ data }: { data: AdminData }) {
   const blank = { name: "", email: "", password: "", role: "collaborator", jobTitle: "", position: "", organization: "", phone: "", notes: "" };
   const [open, setOpen] = useState(false); const [editing, setEditing] = useState<Member | null>(null); const [form, setForm] = useState(blank);
   const create = trpc.members.create.useMutation({ onSuccess: () => { utils.workspace.adminData.invalidate(); toast.success("Cuenta creada correctamente"); setOpen(false); }, onError: error => toast.error(error.message) });
-  const update = trpc.members.update.useMutation({ onSuccess: () => { utils.workspace.adminData.invalidate(); toast.success("Perfil actualizado"); setEditing(null); }, onError: error => toast.error(error.message) });
+  const update = trpc.members.update.useMutation({ onSuccess: () => { utils.workspace.adminData.invalidate(); toast.success(form.password ? "Perfil y clave de acceso actualizados" : "Perfil actualizado"); setEditing(null); }, onError: error => toast.error(error.message) });
   const jobs = data.configuration.filter(item => item.type === "cargo"); const positions = data.configuration.filter(item => item.type === "posición");
   const openCreate = () => { setForm(blank); setEditing(null); setOpen(true); };
   const openEdit = (member: Member) => { setEditing(member); setForm({ name: member.name, email: member.email ?? "", password: "", role: member.role === "admin" || member.role === "direction" ? "admin" : "collaborator", jobTitle: member.jobTitle ?? "", position: member.position ?? "", organization: member.organization ?? "", phone: member.phone ?? "", notes: member.notes ?? "" }); setOpen(true); };

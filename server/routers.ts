@@ -6,7 +6,7 @@ import { LOCAL_SESSION_COOKIE } from "./_core/context";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
-import { isPasswordValid, hashPassword, verifyPassword } from "./localAuth";
+import { isPasswordValid, hashPassword } from "./localAuth";
 import { createLocalSession } from "./localSession";
 import { sendSmtpMessage } from "./mailer";
 import { canManageWorkspace, isOrganizer, roleLabels } from "./permissions";
@@ -53,8 +53,8 @@ export const appRouter = router({
     me: publicProcedure.query(opts => opts.ctx.user),
     localLogin: publicProcedure.input(z.object({ email: z.string().email().max(320), password: z.string().min(1).max(128) })).mutation(async ({ ctx, input }) => {
       await db.ensureSeedData();
-      const member = await db.getMemberByEmail(input.email);
-      if (!member || !member.active || !(await verifyPassword(input.password, member.passwordHash))) throw new TRPCError({ code: "UNAUTHORIZED", message: "Correo o clave incorrectos." });
+      const member = await db.getMemberByCredentials(input.email, input.password);
+      if (!member) throw new TRPCError({ code: "UNAUTHORIZED", message: "Correo o clave incorrectos." });
       const token = await createLocalSession(member.id);
       ctx.res.cookie(LOCAL_SESSION_COOKIE, token, { ...getSessionCookieOptions(ctx.req), sameSite: "none", maxAge: 12 * 60 * 60 * 1000 });
       return { success: true } as const;

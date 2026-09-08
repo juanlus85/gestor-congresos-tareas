@@ -19,6 +19,13 @@ export async function verifyPassword(password: string, stored: string | null | u
   return storedBuffer.length === derived.length && timingSafeEqual(storedBuffer, derived);
 }
 
+export async function findMemberWithPassword<T extends { active: boolean; passwordHash: string | null }>(members: T[], password: string) {
+  for (const member of members) {
+    if (member.active && await verifyPassword(password, member.passwordHash)) return member;
+  }
+  return undefined;
+}
+
 export function isPasswordValid(password: string) {
   return password.length >= 10 && /[a-zA-Z]/.test(password) && /\d/.test(password);
 }

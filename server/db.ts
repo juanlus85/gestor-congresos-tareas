@@ -19,7 +19,7 @@ import {
   smtpSettings,
 } from "../drizzle/schema";
 import { initialMembers, initialTasks } from "./seed";
-import { hashPassword } from "./localAuth";
+import { findMemberWithPassword, hashPassword } from "./localAuth";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -216,6 +216,17 @@ export async function getMemberByEmail(email: string) {
   if (!db) return undefined;
   const matches = await db.select().from(members).where(eq(members.email, email.trim().toLowerCase()));
   return matches.find(member => Boolean(member.passwordHash) && member.active) ?? matches[0];
+}
+
+/**
+ * Busca entre todos los perfiles activos con el mismo correo. Esto mantiene
+ * compatibilidad con importaciones antiguas que pudieron crear duplicados.
+ */
+export async function getMemberByCredentials(email: string, password: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const matches = await db.select().from(members).where(eq(members.email, email.trim().toLowerCase()));
+  return findMemberWithPassword(matches, password);
 }
 
 export async function listEvents() { await ensureSeedData(); const db = await getDb(); return db ? db.select().from(events) : []; }
