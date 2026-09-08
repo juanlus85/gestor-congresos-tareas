@@ -27,7 +27,7 @@ Mantenga las variables ya creadas en Plesk. Es imprescindible que `DATABASE_URL`
 mysql://congreso:CONTRASENA@localhost:3306/congreso
 ```
 
-También deben existir `JWT_SECRET`, `INITIAL_ADMIN_NAME`, `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`, `NODE_ENV=production` y `DOCUMENTS_DIRECTORY`. El valor de `JWT_SECRET` debe tener al menos 32 caracteres. Defina `DOCUMENTS_DIRECTORY` como una ruta que pueda escribir el usuario del dominio, por ejemplo:
+También deben existir `JWT_SECRET`, `INITIAL_ADMIN_NAME`, `INITIAL_ADMIN_EMAIL`, `INITIAL_ADMIN_PASSWORD`, `NODE_ENV=production` y `DOCUMENTS_DIRECTORY`. El valor de `JWT_SECRET` debe tener al menos 32 caracteres. No defina `PORT`: Plesk asigna el puerto interno de la aplicación. Defina `DOCUMENTS_DIRECTORY` como una ruta que pueda escribir el usuario del dominio, por ejemplo:
 
 ```text
 /var/www/vhosts/blancoguzman.es/httpdocs/gestor-congresos/storage/documents
@@ -44,23 +44,23 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-Después, en Plesk, siga esta secuencia: **NPM Install**, **Run script** con el texto exacto `migrate`, y finalmente **Restart App**. El script de migración se ejecuta desde Plesk para que reciba las variables configuradas en el panel, incluida `DATABASE_URL`.
+Después, en Plesk, pulse **NPM Install** y después **Restart App**. La aplicación aplica las migraciones pendientes automáticamente al arrancar usando la `DATABASE_URL` configurada en Plesk. Ya no es necesario ejecutar el botón **Run script**.
 
 ## Actualizaciones posteriores
 
-Para actualizar, ejecute el mismo `git pull`, `pnpm install --frozen-lockfile` y `pnpm build` por SSH. Después pulse **Restart App** en Plesk. Si la actualización contiene cambios de base de datos, ejecute también el script `migrate` desde Plesk antes de reiniciar.
+Para actualizar, ejecute el mismo `git pull`, `pnpm install --frozen-lockfile` y `pnpm build` por SSH. Después pulse **Restart App** en Plesk. El reinicio aplica automáticamente cualquier migración de base de datos pendiente.
 
 ## Diagnóstico
 
-Si Plesk sigue mostrando `Missing script: "migrate"`, el servidor no ha descargado aún la versión más reciente. Compruébelo por SSH:
+Si Plesk muestra un error al arrancar, consulte el registro de Node.js desde Plesk. No use **Run script → migrate** en esta versión. Compruebe por SSH que el archivo de inicio y la versión actual están presentes:
 
 ```bash
 cd /var/www/vhosts/blancoguzman.es/httpdocs/gestor-congresos
 git log -1 --oneline
-grep -n '"migrate"' package.json
+test -f app.js && echo "app.js disponible"
 ```
 
-El segundo comando debe mostrar una línea con `"migrate": "drizzle-kit migrate"`. Si no aparece, repita `git pull origin main`.
+El segundo comando debe mostrar `app.js disponible`. Si no aparece, repita `git pull origin main` y ejecute de nuevo `pnpm build`.
 
 ## Referencias
 

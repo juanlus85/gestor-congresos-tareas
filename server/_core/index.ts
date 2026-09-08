@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { getDocumentByKey, getEffectiveRole } from "../db";
 import { localDocumentPath } from "../documentStorage";
 import { isOrganizer } from "../permissions";
+import { migrateDatabaseOnStartup } from "../dbMigration";
 import { serveStatic, setupVite } from "./vite";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -32,6 +33,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // La base de la vista previa se gestiona por el entorno de desarrollo.
+  // En Plesk/producción, cada reinicio aplica las migraciones pendientes.
+  if (process.env.NODE_ENV === "production") await migrateDatabaseOnStartup();
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
