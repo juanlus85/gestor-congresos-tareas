@@ -1,27 +1,24 @@
 [Unit]
 Description=Gestor de congresos y tareas compartidas
-After=network.target mysql.service
+After=network.target mariadb.service mysql.service
+Wants=network-online.target
 
 [Service]
 Type=simple
 User=omc7wp
 Group=omc7wp
 WorkingDirectory=/opt/gestor-congresos
-Environment=NODE_ENV=production
-Environment=PORT=3000
-Environment=DATABASE_URL=mysql://gestor_app:CAMBIAR_POR_CLAVE_MUY_ROBUSTA@127.0.0.1:3306/gestor_congresos
-Environment=JWT_SECRET=CAMBIAR_POR_SECRETO_ALEATORIO_DE_64_CARACTERES
-Environment=INITIAL_ADMIN_NAME=Administrador inicial
-Environment=INITIAL_ADMIN_EMAIL=admin@su-dominio.es
-Environment=INITIAL_ADMIN_PASSWORD=CAMBIAR_POR_CLAVE_INICIAL_SEGURA
-ExecStart=/usr/bin/pnpm start
-Restart=always
+EnvironmentFile=/etc/gestor-congresos/gestor-congresos.env
+ExecStart=/usr/bin/node /opt/gestor-congresos/dist/index.js
+Restart=on-failure
 RestartSec=5
+TimeoutStopSec=30
+UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=true
-ReadWritePaths=/opt/gestor-congresos/storage
+ReadWritePaths=/var/lib/gestor-congresos/documents
 
 [Install]
 WantedBy=multi-user.target

@@ -1,8 +1,8 @@
-# Plan de corrección de coordinación v1.6
+# Publicación y despliegue v1.6
 
 | Área | Estado | Resultado |
 |---|---|---|
-| Ficha de tarea | Completado | Diseño responsive, con sólo datos esenciales y sin metadatos técnicos. |
-| Asignaciones | Completado | Personas y grupos se muestran como núcleo de la coordinación y se editan bajo demanda. |
-| Configuración | Completado | Limitada a estados, prioridades, cargos y posiciones de uso directo. |
-| Validación | Completado | Acceso local, ficha visual, pruebas de asignación y compilación comprobados. |
+| GitHub | Completado | Repositorio privado creado y código publicado en `juanlus85/gestor-congresos-tareas`. |
+| VPS | Completado | Instalador para Ubuntu, servicio `systemd`, Nginx, MariaDB y HTTPS preparados. |
+| Secretos | Completado | Plantilla para variables del sistema y guía para clave GitHub de sólo lectura. |
+| Validación | Completado | Sintaxis del instalador, 16 pruebas, TypeScript y compilación de producción correctos. |
