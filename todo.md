@@ -1,8 +1,8 @@
-# Espacio colaborativo v1.8
+# Corrección de documentos v1.8.1
 
 | Área | Estado | Resultado |
 |---|---|---|
-| Tareas asignadas | Completado | Cada colaborador abre tareas asignadas, actualiza estado y avance, registra notas y propone el cierre. |
-| Registro de actividad | Completado | La ficha de tarea mantiene notas con autor, fecha y hora visibles para quienes participan. |
-| Documentos | Completado | Los administradores pueden dar acceso general, a colaboradores, a administradores o a personas y grupos concretos. |
-| Validación | Completado | 18 pruebas superadas, TypeScript y compilación de producción correctos. |
+| Escritura documental | Completado | La carga comprueba y comunica por separado errores de carpeta y de MySQL. |
+| Instalaciones previas | Completado | El arranque completa la tabla de permisos documentales si el historial de migraciones era anterior. |
+| Interfaz | Completado | La carga valida un título útil y muestra el error real de la operación. |
+| Validación | Completado | 19 pruebas superadas, incluida escritura y lectura persistente de un archivo. |

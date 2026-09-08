@@ -211,8 +211,19 @@ export const appRouter = router({
       let decoded: ReturnType<typeof decodeDocument>;
       try { decoded = decodeDocument(input.base64, input.fileName); }
       catch (error) { throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "No se pudo procesar el documento." }); }
-      const stored = await saveDocument(decoded.buffer, decoded.fileName);
-      await db.createDocument({ eventId: input.eventId, title: input.title, category: input.category, visibility: input.visibility, fileName: decoded.fileName, mimeType: input.mimeType || "application/octet-stream", sizeBytes: decoded.buffer.length, storageKey: stored.key, url: stored.url, owner: currentName(ctx.user) });
+      let stored: Awaited<ReturnType<typeof saveDocument>>;
+      try {
+        stored = await saveDocument(decoded.buffer, decoded.fileName);
+      } catch (error) {
+        console.error("[Documents] Error al guardar el archivo:", error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "No se pudo escribir el archivo en el servidor. Revisa DOCUMENTS_DIRECTORY y los permisos de su carpeta." });
+      }
+      try {
+        await db.createDocument({ eventId: input.eventId, title: input.title, category: input.category, visibility: input.visibility, fileName: decoded.fileName, mimeType: input.mimeType || "application/octet-stream", sizeBytes: decoded.buffer.length, storageKey: stored.key, url: stored.url, owner: currentName(ctx.user) });
+      } catch (error) {
+        console.error("[Documents] Error al registrar el documento:", error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "El archivo se guardó, pero no se pudo registrar en MySQL. Revisa la tabla documents." });
+      }
       return { success: true };
     }),
     setAccess: protectedProcedure.input(z.object({ id: z.number().int(), visibility: z.enum(["Todos", "Comités", "Organizadores", "Asignados"]), memberIds: z.array(z.number().int()), groupIds: z.array(z.number().int()) })).mutation(async ({ ctx, input }) => {

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 import { getDb } from "./db";
 
@@ -23,7 +24,17 @@ export async function migrateDatabaseOnStartup() {
     // registrar el historial de Drizzle. En ese caso el esquema ya está listo.
     const code = (error as { cause?: { code?: string } }).cause?.code;
     if (code === "ER_TABLE_EXISTS_ERROR") {
-      console.warn("[Database] Esquema existente detectado; se conserva y se inicia la aplicación.");
+      // Compatibilidad con instalaciones creadas antes del historial de Drizzle.
+      // Mantiene la aplicación disponible y completa el único catálogo nuevo que
+      // necesita la compartición selectiva de documentos.
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS documentAccess (
+        id int AUTO_INCREMENT NOT NULL PRIMARY KEY,
+        documentId int NOT NULL,
+        memberId int,
+        groupId int,
+        createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`);
+      console.warn("[Database] Esquema existente detectado; se conserva y se completa la biblioteca documental.");
       return;
     }
     throw error;
